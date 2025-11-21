@@ -1,4 +1,6 @@
 - downloader_wrf.py
-
+    - Implement a way to verify the integrity of grib files present in local machine.
+        - Retry download of those currupted or incomplete.
+        - Delete grib files with problem.
     - Add progress bar for the downloads.
     - Add command-line options for download parameters (timeout, chunk size, etc).
