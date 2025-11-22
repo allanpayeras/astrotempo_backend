@@ -1,4 +1,9 @@
 - downloader_wrf.py
+    - **(DONE)** Create a data directory for latest WRF grib files.
+        - Check the latter has all latest files from INMET server.
+        - Download newer files in a tmp directory and then copy to official data directory.
+        - (this allows the tcc function to work smoothly while new data is being downloaded).
+    - Add a timer to track how long the application is taking to run.
     - Implement a way to verify the integrity of grib files present in local machine.
         - Retry download of those currupted or incomplete.
         - Delete grib files with problem.
