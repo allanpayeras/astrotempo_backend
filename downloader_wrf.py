@@ -1,4 +1,5 @@
 import os
+import shutil
 import asyncio
 import aiohttp
 import requests
@@ -69,11 +70,6 @@ async def download_many(urls, output_dir):
             filename = url.split("/")[-1]
             out_path = output_dir / filename
 
-            # Skip if file already exists
-            if out_path.exists():
-                print(f"⏩ Skipped (exists): {filename}")
-                continue
-
             tasks.append(download_file(session, url, out_path))
 
         if not tasks:
@@ -101,7 +97,7 @@ def get_latest_forecast_run_hour(date: datetime):
     )
 
 
-async def update_forecast_data():
+def get_latest_forecast_urls():
     utc_now = datetime.now(timezone.utc)
     try:
         latest_run_hour = get_latest_forecast_run_hour(utc_now)
@@ -119,7 +115,7 @@ async def update_forecast_data():
             yesterday.year, yesterday.month, yesterday.day, latest_run_hour
         )
 
-    files_to_download = []
+    urls = []
     for hour_delta in range(1, (24 * 7 + 1)):
         forecast_date_time = initial_date_time + timedelta(hours=hour_delta)
 
@@ -133,23 +129,52 @@ async def update_forecast_data():
         )
         url = url_path + url_file_name
 
-        files_to_download.append(url)
+        urls.append(url)
+
+    return urls
+
+
+def get_current_latest_files():
+    if os.path.exists("./latest_wrf_files"):
+        return os.listdir("./latest_wrf_files")
+    else:
+        return []
+
+
+async def update_forecast_data():
+    urls = get_latest_forecast_urls()
+    current_latest_files = get_current_latest_files()
+
+    files_to_download = []
+    for url in urls:
+        filename = url.split("/")[-1]
+        if filename not in current_latest_files:
+            files_to_download.append(url)
+        else:
+            print(f"✅ File already exists: {filename}")
+    if not files_to_download:
+        print("All forecast files are up to date.")
+        return
 
     if os.path.exists("./data_tmp"):
-        current_downloaded_files = os.listdir("./data_tmp")
+        shutil.rmtree("./data_tmp")
+        os.makedirs("./data_tmp")
     else:
-        current_downloaded_files = []
-
+        os.makedirs("./data_tmp")
     await download_many(files_to_download, "./data_tmp")
 
-    # delete all 'old forecast files' in ./data_tmp
-    for file in current_downloaded_files:
-        full_path = os.path.join("./data_tmp", file)
-        if full_path not in [
-            "./data_tmp/" + url.split("/")[-1] for url in files_to_download
-        ]:
-            print("Removing old file:", full_path)
-            os.remove(full_path)
+    # move files to latest_wrf_files and remove data_tmp
+    if os.path.exists("./latest_wrf_files"):
+        shutil.rmtree("./latest_wrf_files")
+        os.makedirs("./latest_wrf_files")
+    else:
+        os.makedirs("./latest_wrf_files")
+    for file_name in os.listdir("./data_tmp"):
+        src_path = os.path.join("./data_tmp", file_name)
+        dest_path = os.path.join("./latest_wrf_files", file_name)
+        os.replace(src_path, dest_path)
+    shutil.rmtree("./data_tmp")
+    print("Forecast data updated.")
 
 
 if __name__ == "__main__":
