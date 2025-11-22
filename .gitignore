@@ -1,5 +1,6 @@
 # temporary data files
 data_tmp/
+latest_wrf_files/
 
 # Environment
 env/
