@@ -115,6 +115,11 @@ def get_latest_forecast_urls():
             yesterday.year, yesterday.month, yesterday.day, latest_run_hour
         )
 
+    # For testing purposes, you can set a fixed initial date and time
+    # otherwise, comment the next two lines
+    # initial_date_time = datetime(year=2025, month=11, day=27, hour=0)
+    # print(f"DEBUG: Using forecast initial date and time (UTC): {initial_date_time}")
+
     urls = []
     for hour_delta in range(1, (24 * 7 + 1)):
         forecast_date_time = initial_date_time + timedelta(hours=hour_delta)
@@ -178,4 +183,8 @@ async def update_forecast_data():
 
 
 if __name__ == "__main__":
+    start_time = datetime.now()
+    print("Starting download of latest forecast files... at ", start_time)
     asyncio.run(update_forecast_data())
+    end_time = datetime.now()
+    print(f"Files downloaded in: {end_time - start_time}")
