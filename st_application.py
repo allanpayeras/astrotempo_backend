@@ -15,13 +15,17 @@ from astropy.coordinates import EarthLocation, AltAz, get_sun, get_moon
 
 
 blue_scale = [
-    [0.00, "#005bb5"],
-    [0.25, "#3f8fdb"],
-    [0.50, "#7fb2e6"],
-    [0.75, "#b8d4f0"],
-    [1.00, "#e8f1fa"],
+    "#005bb5",
+    "#0069D1",
+    "#2E96FF",
+    "#B8DBFF",
+    "#E6F2FF",
 ]
-cloud_bins = [0, 20, 40, 60, 80, 100]
+bounderies = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
+blue_colorscale = []
+for i in range(len(blue_scale)):
+    blue_colorscale.append([bounderies[i], blue_scale[i]])
+    blue_colorscale.append([bounderies[i + 1], blue_scale[i]])
 
 
 def get_sunrise_sunset(
@@ -106,8 +110,8 @@ def main():
         rows=3,
         cols=1,
         shared_xaxes=True,
-        vertical_spacing=0.03,
-        row_heights=[0.05, 0.03, 0.10],
+        vertical_spacing=0.04,
+        row_heights=[0.04, 0.02, 0.10],
         specs=[
             [{"type": "heatmap"}],
             [{"type": "heatmap"}],
@@ -121,11 +125,12 @@ def main():
             z=to_2d(tcc),
             x=np.array(hours) + timedelta(minutes=30),
             y=[""],
-            colorscale="Blues_r",
+            colorscale=blue_colorscale,
             zmin=0,
             zmax=100,
             colorbar=None,
             showscale=False,
+            opacity=0.75,
             hoverinfo="skip",
             name="Cloud Cover",
         ),
@@ -137,11 +142,12 @@ def main():
             z=to_2d(tcc),
             x=np.array(hours) + timedelta(minutes=30),
             y=[""],
-            colorscale="Blues_r",
+            colorscale=blue_colorscale,
             zmin=0,
             zmax=100,
             colorbar=None,
             showscale=False,
+            opacity=0,
             hoverinfo="skip",
             name="Cloud Cover",
         ),
@@ -155,6 +161,7 @@ def main():
             mode="lines+text",
             text=[f"{t:.0f}" for t in temp],
             textposition="top right",
+            opacity=1,
             name="Temperature",
             hoverinfo="skip",
         ),
@@ -168,6 +175,7 @@ def main():
             mode="lines+text",
             text=[f"{d:.0f}" for d in dew],
             textposition="bottom right",
+            opacity=1,
             name="Dew Point",
             hoverinfo="skip",
         ),
@@ -192,6 +200,7 @@ def main():
             zmax=1,
             colorbar=None,
             showscale=False,
+            opacity=0.75,
             hoverinfo="skip",
             name="Moon",
         ),
@@ -314,7 +323,7 @@ def main():
             ticklabelstandoff=20,
             tickfont_size=16,
         ),
-        margin=dict(t=60, b=20),
+        margin=dict(t=60, b=10),
     )
     fig.data[1].update(xaxis="x4")
     fig.update_xaxes(ticks="", row=2, col=1)
