@@ -4,6 +4,9 @@ latest_wrf_files/
 processed_wrf_files/
 extracted_data/
 
+# cron log file
+cron.log
+
 # Environment
 env/
 
