@@ -27,7 +27,7 @@ def main():
 
     files = sorted(os.listdir("./latest_wrf_files"))
     for file in files:
-        output_file = os.path.join(OUTPUT_FOLDER, f"processed_{file}.grib2")
+        output_file = os.path.join(OUTPUT_FOLDER, f"processed_{file}")
         try:
             if os.path.exists(output_file):
                 print(f"✅ Processed file already exists: {output_file}")
