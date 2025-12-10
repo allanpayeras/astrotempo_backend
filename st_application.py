@@ -1,4 +1,6 @@
 import os
+import duckdb
+import folium
 
 import pygrib as pg
 import streamlit as st
@@ -7,11 +9,14 @@ import pandas as pd
 import plotly.graph_objects as go
 import astropy.units as u
 
+from streamlit_js_eval import get_geolocation
 from datetime import datetime, timezone, timedelta
 from plotly.subplots import make_subplots
 from zoneinfo import ZoneInfo
 from astropy.time import Time
 from astropy.coordinates import EarthLocation, AltAz, get_sun, get_moon
+from streamlit_folium import st_folium
+from geopy.geocoders import Nominatim
 
 
 blue_scale = [
@@ -26,6 +31,50 @@ blue_colorscale = []
 for i in range(len(blue_scale)):
     blue_colorscale.append([bounderies[i], blue_scale[i]])
     blue_colorscale.append([bounderies[i + 1], blue_scale[i]])
+
+
+def get_forecast_for_location(db_path: str, lat: float, lon: float) -> pd.DataFrame:
+    """
+    Returns the hourly forecast for the grid point nearest to (lat, lon).
+
+    Arguments:
+        db_path (str): Path to the DuckDB file, e.g., 'forecast.duckdb'
+        lat (float): Latitude of user location
+        lon (float): Longitude of user location
+
+    Returns:
+        pandas.DataFrame: Columns = valid_time, cloud_cover, temp, dewpoint
+    """
+
+    conn = duckdb.connect(db_path, read_only=True)
+
+    # 1. Find the nearest grid point stored in the DB
+    nearest_query = """
+        SELECT lat, lon
+        FROM forecast
+        ORDER BY (lat - ?) * (lat - ?) + (lon - ?) * (lon - ?) ASC
+        LIMIT 1
+    """
+    nearest_lat, nearest_lon = conn.execute(
+        nearest_query, (lat, lat, lon, lon)
+    ).fetchone()
+
+    # 2. Retrieve forecast for this grid point
+    forecast_query = """
+        SELECT 
+            forecast_hour,
+            cloud,
+            temp,
+            dewpoint
+        FROM forecast
+        WHERE lat = ? AND lon = ?
+        ORDER BY forecast_hour ASC
+    """
+
+    df = conn.execute(forecast_query, (nearest_lat, nearest_lon)).fetchdf()
+    conn.close()
+
+    return df
 
 
 def get_sunrise_sunset(
@@ -96,15 +145,53 @@ def to_2d(values):
 def main():
     st.set_page_config(page_title="Astro Forecast", layout="wide")
 
+    geolocator = Nominatim(user_agent="streamlit_reverse_geocoder")
+
     # get data
-    target_lat, target_lon = -25.39, 310.79
-    df = pd.read_csv("extracted_data/extracted_wrf.csv")
-    df["time"] = pd.to_datetime(df["time"], utc=True)
+    loc = get_geolocation()
+    if loc is None:
+        st.info("Requesting location… please allow location permissions.")
+        st.stop()
+    else:
+        target_lat = loc["coords"]["latitude"]
+        target_lon = 360 + loc["coords"]["longitude"]
+        try:
+            location = geolocator.reverse((target_lat, target_lon), language="en")
+            print(location.raw)
+            address = location.raw["address"] if location else "No address found"
+            st.markdown(
+                f"Forecast for {address['suburb']}, {address['city']}, {address['state']}"
+            )
+            st.markdown(f"Lat: {target_lat:.2f} Lon: {target_lon:.2f}")
+        except Exception as e:
+            st.error(f"Error: {e}")
+    # --- 2. Create the Folium map centered on user ---
+    m = folium.Map(location=[target_lat, target_lon], zoom_start=12)
+
+    # Marker showing user's location
+    folium.Marker(
+        [target_lat, target_lon], popup="You are here", icon=folium.Icon(color="blue")
+    ).add_to(m)
+
+    # # Allow user to click and get coordinates
+    # m.add_child(folium.LatLngPopup())
+
+    # # --- 3. Display the map and capture click ---
+    # map_data = st_folium(m, width=700, height=500)
+
+    # # --- 4. Show clicked coordinates ---
+    # if map_data and "last_clicked" in map_data and map_data["last_clicked"]:
+    #     target_lat = map_data["last_clicked"]["lat"]
+    #     target_lon = map_data["last_clicked"]["lng"]
+    #     st.success(f"Selected Point → Lat: {target_lat:.6f}, Lon: {target_lon:.6f}")
+
+    df = get_forecast_for_location("forecast.duckdb", target_lat, target_lon)
+    df["time"] = pd.to_datetime(df["forecast_hour"], format="%Y%m%d%H", utc=True)
     hours = df["time"].to_list()
     hours = [t.astimezone(ZoneInfo("America/Sao_Paulo")) for t in hours]
-    tcc = df["total_cloud_cover"].to_numpy()
-    temp = df["temperature_C"].to_numpy()
-    dew = df["dew_point_C"].to_numpy()
+    tcc = df["cloud"].to_numpy()
+    temp = (df["temp"] - 273.15).to_numpy()
+    dew = (df["dewpoint"] - 273.15).to_numpy()
 
     fig = make_subplots(
         rows=3,
@@ -130,7 +217,7 @@ def main():
             zmax=100,
             colorbar=None,
             showscale=False,
-            opacity=0.75,
+            opacity=0.9,
             hoverinfo="skip",
             name="Cloud Cover",
         ),
@@ -200,7 +287,7 @@ def main():
             zmax=1,
             colorbar=None,
             showscale=False,
-            opacity=0.75,
+            opacity=0.9,
             hoverinfo="skip",
             name="Moon",
         ),
