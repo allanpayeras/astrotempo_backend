@@ -3,6 +3,7 @@ data_tmp/
 latest_wrf_files/
 processed_wrf_files/
 extracted_data/
+forecast.duckdb
 
 # cron log file
 cron.log
