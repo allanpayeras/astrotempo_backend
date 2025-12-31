@@ -17,6 +17,7 @@ GRIB_VARIABLES = {
 }
 
 DB_PATH = "forecast.duckdb"
+TMP_DB_PATH = "forecast_tmp.duckdb"
 
 
 def parse_filename(file_path: Path):
@@ -140,7 +141,7 @@ def insert_batch(conn, data):
 
 
 def ingest_folder(folder: str):
-    conn = duckdb.connect(DB_PATH)
+    conn = duckdb.connect(TMP_DB_PATH)
     init_database(conn)
 
     folder = Path(folder)
@@ -160,3 +161,5 @@ def ingest_folder(folder: str):
 # ==============================
 if __name__ == "__main__":
     ingest_folder("latest_wrf_files")
+    # Move temp DB to final location
+    Path(TMP_DB_PATH).rename(DB_PATH)
