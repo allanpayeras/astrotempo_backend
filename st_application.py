@@ -1,6 +1,8 @@
 import os
 import duckdb
 import folium
+import time as time_pkg
+import re
 
 import pygrib as pg
 import streamlit as st
@@ -31,6 +33,63 @@ blue_colorscale = []
 for i in range(len(blue_scale)):
     blue_colorscale.append([bounderies[i], blue_scale[i]])
     blue_colorscale.append([bounderies[i + 1], blue_scale[i]])
+
+
+def get_color_for_value(value: float) -> str:
+    """Return appropriate hex color from blue_scale for cloud-cover percentage (0–100)."""
+    v = value / 100
+    for i in range(len(bounderies) - 1):
+        if bounderies[i] <= v < bounderies[i + 1]:
+            return blue_scale[i]
+    return blue_scale[-1]
+
+
+def build_cloud_cover_summary(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Return a DataFrame representing next 6 days with cloud-cover squares:
+    Columns: ['day','0–6h','6–12h','12–18h','18–24h']
+    """
+
+    df = df.copy()
+    df["dt"] = pd.to_datetime(df["forecast_hour"], format="%Y%m%d%H", utc=True)
+    df["dt_local"] = df["dt"].dt.tz_convert(ZoneInfo("America/Sao_Paulo"))
+    df["date"] = df["dt_local"].dt.date
+    df["hour"] = df["dt_local"].dt.hour
+
+    # bucket assignment
+    def bucket(h):
+        if 0 <= h < 6:
+            return "0–6h"
+        if 6 <= h < 12:
+            return "6–12h"
+        if 12 <= h < 18:
+            return "12–18h"
+        return "18–24h"
+
+    df["bucket"] = df["hour"].apply(bucket)
+
+    today = datetime.now(tz=ZoneInfo("America/Sao_Paulo")).date()
+    next_days = sorted([d for d in df["date"].unique() if d >= today])[:6]
+
+    rows = []
+    for d in next_days:
+        day_df = df[df["date"] == d]
+
+        row = {"day": pd.to_datetime(d).strftime("%a %d %b")}
+        for bucket_name in ["0–6h", "6–12h", "12–18h", "18–24h"]:
+            subset = day_df[day_df["bucket"] == bucket_name]
+            if subset.empty:
+                row[bucket_name] = ""
+            else:
+                mean_cc = subset["cloud"].mean()
+                color = get_color_for_value(mean_cc)
+                row[bucket_name] = (
+                    f'<div style="width:25px;height:25px;background:{color};border-radius:4px;"></div>'
+                )
+        rows.append(row)
+        rows[0]["day"] = "<b>Today</b>"
+
+    return pd.DataFrame(rows)
 
 
 def get_forecast_for_location(db_path: str, lat: float, lon: float) -> pd.DataFrame:
@@ -142,299 +201,473 @@ def to_2d(values):
     return np.expand_dims(values, axis=0)
 
 
+def get_update_time(filename: str) -> datetime:
+    """Extract the forecast update time from a WRF grib filename.
+
+    The filename contains an update time in UTC in the format YYYYMMDDHH.
+    Example: WRF_cpt_07KM_2025122600_2025122601.grib2 -> 2025-12-26 00:00 UTC
+
+    Args:
+        filename: Path or filename string containing the timestamp.
+
+    Returns:
+        A timezone-aware datetime in UTC.
+
+    Raises:
+        ValueError: if no YYYYMMDDHH timestamp is found in the filename.
+    """
+
+    # Work on basename to be robust to paths
+    name = os.path.basename(filename)
+
+    # Find first occurrence of 10 consecutive digits (YYYYMMDDHH)
+    m = re.search(r"(\d{10})", name)
+    if not m:
+        raise ValueError(f"No update timestamp found in filename: {filename}")
+
+    ts = m.group(1)
+    # Parse into datetime and set UTC tzinfo
+    dt = datetime.strptime(ts, "%Y%m%d%H").replace(tzinfo=timezone.utc)
+    return dt
+
+
+def get_address_text(address: dict):
+    # city_district, district, borough, suburb, subdivision
+    values = []
+    if "city_district" in address.keys():
+        values.append(address["city_district"])
+    elif "suburb" in address.keys():
+        values.append(address["suburb"])
+    elif "borough" in address.keys():
+        values.append(address["borough"])
+    elif "district" in address.keys():
+        values.append(address["district"])
+    elif "neighbourhood" in address.keys():
+        values.append(address["neighbourhood"])
+    # municipality, city, town, village
+    if "city" in address.keys():
+        values.append(address["city"])
+    elif "town" in address.keys():
+        values.append(address["town"])
+    elif "village" in address.keys():
+        values.append(address["village"])
+    elif "municipality" in address.keys():
+        values.append(address["municipality"])
+    # region, state, state_district, county, ISO3166-2-lvl
+    if "state" in address.keys():
+        values.append(address["state"])
+    elif "region" in address.keys():
+        values.append(address["region"])
+
+    if values:
+        return ", ".join(values)
+    else:
+        return None
+
+
 def main():
     st.set_page_config(page_title="Astro Forecast", layout="wide")
+    ss = st.session_state
+
+    # ---------- SESSION STATE INITIALIZATION ----------
+    if "lat" not in ss:
+        ss.lat = None
+    if "lon" not in ss:
+        ss.lon = None
+    # if "clear_next_run" not in ss:
+    #     ss.clear_next_run = True
+
+    # Create placeholders ONCE
+    # if "location_container" not in ss:
+    #     ss.location_container = st.empty()
+    # # if "map_container" not in ss:
+    # #     ss.map_container = st.empty()
+    # # if "chart_container" not in ss:
+    # #     ss.chart_container = st.empty()
+    # if "summary_container" not in ss:
+    #     ss.summary_container = st.empty()
+    # if "info_container" not in ss:
+    #     ss.info_container = st.empty()
+
+    # If a new render cycle is requested, clear everything ONCE
+    # if ss.clear_next_run:
+    #     # ss.location_container.empty()
+    #     ss.summary_container.empty()
+    #     ss.info_container.empty()
+    #     # Reset flag and continue execution
+    #     ss.clear_next_run = False
+
+    # get update time from forecast file
+    grib_files = os.listdir("latest_wrf_files")
+    update_time = get_update_time(grib_files[0])
 
     geolocator = Nominatim(user_agent="streamlit_reverse_geocoder")
+    if ss.lat is None or ss.lon is None:
+        loc = get_geolocation()
+        if loc is not None:
+            ss.lat = loc["coords"]["latitude"]
+            ss.lon = 360 + loc["coords"]["longitude"]
+            # ss.clear_next_run = True
+            st.rerun()
+        else:
+            st.info("Requesting location permission from browser…")
+            st.stop()
 
-    # get data
-    loc = get_geolocation()
-    if loc is None:
-        st.info("Requesting location… please allow location permissions.")
-        st.stop()
-    else:
-        target_lat = loc["coords"]["latitude"]
-        target_lon = 360 + loc["coords"]["longitude"]
+    col_map, col_geo_info = st.columns([0.4, 0.6])
+
+    # containers created inside columns – this guarantees side-by-side display
+    with col_map:
+        m = folium.Map(location=[ss.lat, ss.lon], zoom_start=11)
+
+        folium.Marker(
+            [ss.lat, ss.lon],
+            # popup=f"({ss.lat:.3f}, {ss.lon:.3f})",
+            icon=folium.Icon(color="red"),
+        ).add_to(m)
+
+        # Enable clicking
+        m.add_child(folium.LatLngPopup())
+
+        # ---------------------------
+        # Step 4: Render map and capture clicks
+        # ---------------------------
+        map_data = st_folium(
+            m, width=550, height=350, returned_objects=["last_clicked"]
+        )
+
+        if map_data and map_data.get("last_clicked"):
+            ss.lat = map_data["last_clicked"]["lat"]
+            ss.lon = map_data["last_clicked"]["lng"]
+            # ss.clear_next_run = True
+            st.rerun()
+    with col_geo_info:
         try:
-            location = geolocator.reverse((target_lat, target_lon), language="en")
+            print("lat:", ss.lat, "lon:", ss.lon)
+            location = geolocator.reverse((ss.lat, ss.lon), language="en")
             print(location.raw)
             address = location.raw["address"] if location else "No address found"
-            st.markdown(
-                f"Forecast for {address['suburb']}, {address['city']}, {address['state']}"
-            )
-            st.markdown(f"Lat: {target_lat:.2f} Lon: {target_lon:.2f}")
+            formated_address = get_address_text(address)
+            print("formated_address:", formated_address)
+            if formated_address is not None:
+                st.markdown(
+                    f"<big>**Forecast for** {formated_address}</big>",
+                    unsafe_allow_html=True,
+                )
+                st.markdown(
+                    f"""
+                            <p style="line-height: 1.1;">
+                                latitude: <code>{ss.lat:.3f}</code><br>
+                                longitude: <code>{ss.lon:.3f}</code>
+                            </p>
+                            """,
+                    unsafe_allow_html=True,
+                )
         except Exception as e:
             st.error(f"Error: {e}")
-    # --- 2. Create the Folium map centered on user ---
-    m = folium.Map(location=[target_lat, target_lon], zoom_start=12)
 
-    # Marker showing user's location
-    folium.Marker(
-        [target_lat, target_lon], popup="You are here", icon=folium.Icon(color="blue")
-    ).add_to(m)
+    col_table, col_chart = st.columns([0.3, 0.7])
 
-    # # Allow user to click and get coordinates
-    # m.add_child(folium.LatLngPopup())
+    # containers created inside columns – this guarantees side-by-side display
+    with col_table:
+        table_container = st.empty()
+    with col_chart:
+        chart_container = st.empty()
 
-    # # --- 3. Display the map and capture click ---
-    # map_data = st_folium(m, width=700, height=500)
+    # store them in session_state only once so that they survive reruns
+    # if "map_container" not in ss:
+    #     ss.map_container = map_container
+    # if "chart_container" not in ss:
+    #     ss.chart_container = chart_container
 
-    # # --- 4. Show clicked coordinates ---
-    # if map_data and "last_clicked" in map_data and map_data["last_clicked"]:
-    #     target_lat = map_data["last_clicked"]["lat"]
-    #     target_lon = map_data["last_clicked"]["lng"]
-    #     st.success(f"Selected Point → Lat: {target_lat:.6f}, Lon: {target_lon:.6f}")
+    # if ss.clear_next_run:
+    #     ss.map_container.empty()
+    #     ss.chart_container.empty()
+    #     ss.clear_next_run = False
 
-    df = get_forecast_for_location("forecast.duckdb", target_lat, target_lon)
-    df["time"] = pd.to_datetime(df["forecast_hour"], format="%Y%m%d%H", utc=True)
-    hours = df["time"].to_list()
-    hours = [t.astimezone(ZoneInfo("America/Sao_Paulo")) for t in hours]
-    tcc = df["cloud"].to_numpy()
-    temp = (df["temp"] - 273.15).to_numpy()
-    dew = (df["dewpoint"] - 273.15).to_numpy()
-
-    fig = make_subplots(
-        rows=3,
-        cols=1,
-        shared_xaxes=True,
-        vertical_spacing=0.04,
-        row_heights=[0.04, 0.02, 0.10],
-        specs=[
-            [{"type": "heatmap"}],
-            [{"type": "heatmap"}],
-            [{"type": "scatter"}],
-        ],
-    )
-
-    # plot data
-    fig.add_trace(
-        go.Heatmap(
-            z=to_2d(tcc),
-            x=np.array(hours) + timedelta(minutes=30),
-            y=[""],
-            colorscale=blue_colorscale,
-            zmin=0,
-            zmax=100,
-            colorbar=None,
-            showscale=False,
-            opacity=0.9,
-            hoverinfo="skip",
-            name="Cloud Cover",
-        ),
-        row=1,
-        col=1,
-    )
-    fig.add_trace(
-        go.Heatmap(
-            z=to_2d(tcc),
-            x=np.array(hours) + timedelta(minutes=30),
-            y=[""],
-            colorscale=blue_colorscale,
-            zmin=0,
-            zmax=100,
-            colorbar=None,
-            showscale=False,
-            opacity=0,
-            hoverinfo="skip",
-            name="Cloud Cover",
-        ),
-        row=1,
-        col=1,
-    )
-    fig.add_trace(
-        go.Scatter(
-            x=hours,
-            y=temp,
-            mode="lines+text",
-            text=[f"{t:.0f}" for t in temp],
-            textposition="top right",
-            opacity=1,
-            name="Temperature",
-            hoverinfo="skip",
-        ),
-        row=3,
-        col=1,
-    )
-    fig.add_trace(
-        go.Scatter(
-            x=hours,
-            y=dew,
-            mode="lines+text",
-            text=[f"{d:.0f}" for d in dew],
-            textposition="bottom right",
-            opacity=1,
-            name="Dew Point",
-            hoverinfo="skip",
-        ),
-        row=3,
-        col=1,
-    )
-
-    time, moon_alt = get_moon_altitudes(
-        [hours[0], hours[-1]],
-        target_lat,
-        target_lon,
-        timezone=ZoneInfo("America/Sao_Paulo"),
-    )
-    moon_is_up = np.where(moon_alt > 0, 1, np.nan)
-    fig.add_trace(
-        go.Heatmap(
-            z=to_2d(moon_is_up),
-            x=time,
-            y=[""],
-            colorscale="Greys_r",
-            zmin=0,
-            zmax=1,
-            colorbar=None,
-            showscale=False,
-            opacity=0.9,
-            hoverinfo="skip",
-            name="Moon",
-        ),
-        row=2,
-        col=1,
-    )
-
-    # add vertical lines for now, midnight, sunrise/sunset
-    now = datetime.now(tz=ZoneInfo("America/Sao_Paulo"))
-    fig.add_shape(
-        type="line",
-        x0=now,
-        x1=now,  # 0–1 in paper coordinates
-        y0=0,
-        y1=1,  # full height of figure
-        xref="x1",
-        yref="paper",
-        line=dict(color="red", width=3, dash="solid"),
-    )
-    max_date = np.max(hours)
-    max_day_delta = (max_date - now).days + 1
-    for day_delta in range(max_day_delta):
-        d = now.replace(hour=0, minute=0, second=0) + timedelta(days=day_delta)
-        sunset, sunrise = get_sunrise_sunset(
-            d, target_lat, target_lon, timezone=ZoneInfo("America/Sao_Paulo")
-        )
-        ss_astronomical, sr_astronomical = get_sunrise_sunset(
-            d,
-            target_lat,
-            target_lon,
-            timezone=ZoneInfo("America/Sao_Paulo"),
-            type="astronomical",
-        )
-        # daytime shading
-        fig.add_shape(
-            type="rect",
-            x0=sunrise,
-            x1=sunset,
-            y0=-1,
-            y1=1.2,
-            xref="x",
-            yref="paper",
-            fillcolor="#37376D",
-            line_width=0,
-            opacity=0.4,
-            layer="below",
-        )
-        # twilight shading
-        fig.add_shape(
-            type="rect",
-            x0=sr_astronomical,
-            x1=sunrise,
-            y0=-1,
-            y1=1.2,
-            xref="x",
-            yref="paper",
-            fillcolor="#27274E",
-            line_width=0,
-            opacity=0.5,
-            layer="below",
-        )
-        fig.add_shape(
-            type="rect",
-            x0=sunset,
-            x1=ss_astronomical,
-            y0=-1,
-            y1=1.2,
-            xref="x",
-            yref="paper",
-            fillcolor="#27274E",
-            line_width=0,
-            opacity=0.5,
-            layer="below",
+    with table_container:
+        with st.spinner("Loading forecast..."):
+            df = get_forecast_for_location("forecast.duckdb", ss.lat, ss.lon)
+            df["time"] = pd.to_datetime(
+                df["forecast_hour"], format="%Y%m%d%H", utc=True
+            )
+            hours = df["time"].to_list()
+            hours = [t.astimezone(ZoneInfo("America/Sao_Paulo")) for t in hours]
+            tcc = df["cloud"].to_numpy()
+            temp = (df["temp"] - 273.15).to_numpy()
+            dew = (df["dewpoint"] - 273.15).to_numpy()
+        summary_df = build_cloud_cover_summary(df)
+        st.write(
+            summary_df.to_html(escape=False, justify="center", index=False),
+            unsafe_allow_html=True,
         )
 
-    # configure axes and layout
-    fig.update_yaxes(
-        title_text="Clouds", ticks="", row=1, col=1, fixedrange=True, showgrid=False
-    )
-    fig.update_yaxes(
-        title_text="Moon", ticks="", row=2, col=1, fixedrange=True, showgrid=False
-    )
-    fig.update_yaxes(
-        title_text="Temperature (°C)",
-        ticks="",
-        showgrid=False,
-        showticklabels=False,
-        row=3,
-        col=1,
-        fixedrange=True,
-    )
-    fig.update_xaxes(
-        ticks="",
-        showticklabels=True,
-        ticklabelposition="outside",
-        ticklabelmode="period",
-        dtick=(60 * 60000),
-        tickformat="%H",
-        row=1,
-        col=1,
-        side="top",
-        autorange=False,
-        range=[
-            datetime.now() - timedelta(hours=5),
-            datetime.now() + timedelta(days=1),
-        ],
-    )
-    dates = df["time"].dt.date.unique()
-    noons = [pd.Timestamp(day) + pd.Timedelta(hours=12) for day in dates]
-    ticktexts = [d.strftime("%a %d %b") for d in noons]
-    fig.update_layout(
-        xaxis4=dict(
-            overlaying="x",  # draw on top of x-axis
-            matches="x",
-            side="top",
-            tickvals=noons,
-            ticktext=ticktexts,
-            ticklabelposition="outside",
-            ticks="",
-            ticklabelstandoff=20,
-            tickfont_size=16,
-        ),
-        margin=dict(t=60, b=10),
-    )
-    fig.data[1].update(xaxis="x4")
-    fig.update_xaxes(ticks="", row=2, col=1)
-    fig.update_xaxes(showticklabels=False, row=3, col=1)
-    fig.update_layout(
-        paper_bgcolor="#181830",
-        plot_bgcolor="#181830",
-        showlegend=False,
-        height=430,
-        width=1200,
-        autosize=False,
-        dragmode="pan",
-    )
+    with chart_container:
+        with st.spinner("Loading forecast..."):
+            fig = make_subplots(
+                rows=3,
+                cols=1,
+                shared_xaxes=True,
+                vertical_spacing=0.05,
+                row_heights=[0.04, 0.02, 0.10],
+                specs=[
+                    [{"type": "heatmap"}],
+                    [{"type": "heatmap"}],
+                    [{"type": "scatter"}],
+                ],
+            )
 
-    st.plotly_chart(
-        fig,
-        width="stretch",
-        config={
-            "scrollZoom": False,  # disable wheel zoom
-            "doubleClick": False,  # disable reset on double-click
-            "displayModeBar": False,  # hide tool bar
-            "editable": False,  # disable edit tools
-            "staticPlot": False,  # must be False or pan won't work
-        },
+            # plot data
+            fig.add_trace(
+                go.Heatmap(
+                    z=to_2d(tcc),
+                    x=np.array(hours) + timedelta(minutes=30),
+                    y=[""],
+                    colorscale=blue_colorscale,
+                    zmin=0,
+                    zmax=100,
+                    colorbar=None,
+                    showscale=False,
+                    opacity=0.9,
+                    hoverinfo="skip",
+                    name="Cloud Cover",
+                ),
+                row=1,
+                col=1,
+            )
+            fig.add_trace(
+                go.Heatmap(
+                    z=to_2d(tcc),
+                    x=np.array(hours) + timedelta(minutes=30),
+                    y=[""],
+                    colorscale=blue_colorscale,
+                    zmin=0,
+                    zmax=100,
+                    colorbar=None,
+                    showscale=False,
+                    opacity=0,
+                    hoverinfo="skip",
+                    name="Cloud Cover",
+                ),
+                row=1,
+                col=1,
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=hours,
+                    y=temp,
+                    mode="lines+text",
+                    text=[f"{t:.0f}" for t in temp],
+                    textposition="top right",
+                    opacity=1,
+                    name="Temperature",
+                    hoverinfo="skip",
+                ),
+                row=3,
+                col=1,
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=hours,
+                    y=dew,
+                    mode="lines+text",
+                    text=[f"{d:.0f}" for d in dew],
+                    textposition="bottom right",
+                    opacity=1,
+                    name="Dew Point",
+                    hoverinfo="skip",
+                ),
+                row=3,
+                col=1,
+            )
+
+            time, moon_alt = get_moon_altitudes(
+                [hours[0], hours[-1]],
+                ss.lat,
+                ss.lon,
+                timezone=ZoneInfo("America/Sao_Paulo"),
+            )
+            moon_is_up = np.where(moon_alt > 0, 1, np.nan)
+            fig.add_trace(
+                go.Heatmap(
+                    z=to_2d(moon_is_up),
+                    x=time,
+                    y=[""],
+                    colorscale="Greys_r",
+                    zmin=0,
+                    zmax=1,
+                    colorbar=None,
+                    showscale=False,
+                    opacity=0.9,
+                    hoverinfo="skip",
+                    name="Moon",
+                ),
+                row=2,
+                col=1,
+            )
+
+            # add vertical lines for now, midnight, sunrise/sunset
+            now = datetime.now(tz=ZoneInfo("America/Sao_Paulo"))
+            fig.add_shape(
+                type="line",
+                x0=now,
+                x1=now,  # 0–1 in paper coordinates
+                y0=0,
+                y1=1,  # full height of figure
+                xref="x1",
+                yref="paper",
+                line=dict(color="red", width=3, dash="solid"),
+            )
+            max_date = np.max(hours)
+            max_day_delta = (max_date - now).days + 1
+            for day_delta in range(max_day_delta):
+                d = now.replace(hour=0, minute=0, second=0) + timedelta(days=day_delta)
+                sunset, sunrise = get_sunrise_sunset(
+                    d,
+                    ss.lat,
+                    ss.lon,
+                    timezone=ZoneInfo("America/Sao_Paulo"),
+                )
+                ss_astronomical, sr_astronomical = get_sunrise_sunset(
+                    d,
+                    ss.lat,
+                    ss.lon,
+                    timezone=ZoneInfo("America/Sao_Paulo"),
+                    type="astronomical",
+                )
+                # daytime shading
+                fig.add_shape(
+                    type="rect",
+                    x0=sunrise,
+                    x1=sunset,
+                    y0=-1,
+                    y1=1.2,
+                    xref="x",
+                    yref="paper",
+                    fillcolor="#37376D",
+                    line_width=0,
+                    opacity=0.4,
+                    layer="below",
+                )
+                # twilight shading
+                fig.add_shape(
+                    type="rect",
+                    x0=sr_astronomical,
+                    x1=sunrise,
+                    y0=-1,
+                    y1=1.2,
+                    xref="x",
+                    yref="paper",
+                    fillcolor="#27274E",
+                    line_width=0,
+                    opacity=0.5,
+                    layer="below",
+                )
+                fig.add_shape(
+                    type="rect",
+                    x0=sunset,
+                    x1=ss_astronomical,
+                    y0=-1,
+                    y1=1.2,
+                    xref="x",
+                    yref="paper",
+                    fillcolor="#27274E",
+                    line_width=0,
+                    opacity=0.5,
+                    layer="below",
+                )
+
+            # configure axes and layout
+            fig.update_yaxes(
+                title_text="Clouds",
+                ticks="",
+                row=1,
+                col=1,
+                fixedrange=True,
+                showgrid=False,
+            )
+            fig.update_yaxes(
+                title_text="Moon",
+                ticks="",
+                row=2,
+                col=1,
+                fixedrange=True,
+                showgrid=False,
+            )
+            fig.update_yaxes(
+                title_text="Temperature (°C)",
+                ticks="",
+                showgrid=False,
+                showticklabels=False,
+                row=3,
+                col=1,
+                fixedrange=True,
+            )
+            fig.update_xaxes(
+                ticks="",
+                showticklabels=True,
+                ticklabelposition="outside",
+                ticklabelmode="period",
+                dtick=(60 * 60000),
+                tickformat="%H",
+                row=1,
+                col=1,
+                side="top",
+                autorange=False,
+                range=[
+                    datetime.now() - timedelta(hours=5),
+                    datetime.now() + timedelta(days=1),
+                ],
+            )
+            dates = df["time"].dt.date.unique()
+            noons = [pd.Timestamp(day) + pd.Timedelta(hours=12) for day in dates]
+            ticktexts = [d.strftime("%a %d %b") for d in noons]
+            fig.update_layout(
+                xaxis4=dict(
+                    overlaying="x",  # draw on top of x-axis
+                    matches="x",
+                    side="top",
+                    tickvals=noons,
+                    ticktext=ticktexts,
+                    ticklabelposition="outside",
+                    ticks="",
+                    ticklabelstandoff=20,
+                    tickfont_size=16,
+                ),
+                margin=dict(t=60, b=10),
+            )
+            fig.data[1].update(xaxis="x4")
+            fig.update_xaxes(ticks="", row=2, col=1)
+            fig.update_xaxes(showticklabels=False, row=3, col=1)
+            fig.update_layout(
+                paper_bgcolor="#181830",
+                plot_bgcolor="#181830",
+                showlegend=False,
+                height=400,
+                width=None,
+                autosize=False,
+                dragmode="pan",
+            )
+
+        st.plotly_chart(
+            fig,
+            width="stretch",
+            config={
+                "scrollZoom": False,  # disable wheel zoom
+                "doubleClick": False,  # disable reset on double-click
+                "displayModeBar": False,  # hide tool bar
+                "editable": False,  # disable edit tools
+                "staticPlot": False,  # must be False or pan won't work
+            },
+        )
+
+    # --- cloud cover summary table container ---
+    # with ss.summary_container:
+
+    # Show last update time
+    # with ss.info_container:
+    st.markdown(
+        f"<small>Latest forecast update (UTC): {update_time.strftime('%Y-%m-%d %H:%M')}</small>",
+        unsafe_allow_html=True,
     )
 
 
