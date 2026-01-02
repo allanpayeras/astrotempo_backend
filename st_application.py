@@ -1,24 +1,22 @@
 import os
 import duckdb
 import folium
-import time as time_pkg
 import re
 
-import pygrib as pg
 import streamlit as st
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
-import astropy.units as u
 
 from streamlit_js_eval import get_geolocation
 from datetime import datetime, timezone, timedelta
 from plotly.subplots import make_subplots
 from zoneinfo import ZoneInfo
-from astropy.time import Time
-from astropy.coordinates import EarthLocation, AltAz, get_sun, get_moon
+
 from streamlit_folium import st_folium
 from geopy.geocoders import Nominatim
+from skyfield.api import load, wgs84
+from skyfield import almanac
 
 
 blue_scale = [
@@ -33,6 +31,55 @@ blue_colorscale = []
 for i in range(len(blue_scale)):
     blue_colorscale.append([bounderies[i], blue_scale[i]])
     blue_colorscale.append([bounderies[i + 1], blue_scale[i]])
+
+
+def get_sun_times(date: datetime, latitude: float, longitude: float, tz: ZoneInfo):
+    # Load ephemeris and time scale
+    ts = load.timescale()
+    eph = load("de421.bsp")
+
+    # Observer location
+    observer = wgs84.latlon(latitude, longitude)
+
+    # Build start/end datetime for this date
+    start = datetime(date.year, date.month, date.day, 0, 0, tzinfo=tz)
+    end = datetime(date.year, date.month, date.day, 23, 59, tzinfo=tz)
+
+    t0 = ts.from_datetime(start)
+    t1 = ts.from_datetime(end)
+
+    # Compute sunrise/sunset
+    f = almanac.sunrise_sunset(eph, observer)
+    times, events = almanac.find_discrete(t0, t1, f)
+
+    sunrise, sunset = None, None
+
+    for t, e in zip(times, events):
+        dt = t.utc_datetime().astimezone(tz)
+        if e == 1:  # Sunrise
+            sunrise = dt
+        elif e == 0:  # Sunset
+            sunset = dt
+
+    # Compute astronomical twilight (-18 degrees)
+    f2 = almanac.dark_twilight_day(eph, observer)
+    t2, ev2 = almanac.find_discrete(t0, t1, f2)
+
+    astronomical_sunrise, astronomical_sunset = None, None
+
+    for t, e in zip(t2, ev2):
+        dt = t.utc_datetime().astimezone(tz)
+
+        # Night = 0, Astronomical twilight = 1
+        # Astronomical sunrise → transition 0 → 1 in morning
+        if e == 1 and astronomical_sunrise is None:
+            astronomical_sunrise = dt
+
+        # Astronomical sunset → transition 1 → 0 in evening
+        if e == 0 and astronomical_sunrise is not None:
+            astronomical_sunset = dt
+
+    return sunrise, sunset, astronomical_sunrise, astronomical_sunset
 
 
 def get_color_for_value(value: float) -> str:
@@ -74,8 +121,11 @@ def build_cloud_cover_summary(df: pd.DataFrame) -> pd.DataFrame:
     rows = []
     for d in next_days:
         day_df = df[df["date"] == d]
+        day = datetime(
+            d.year, d.month, d.day, hour=20, tzinfo=ZoneInfo("America/Sao_Paulo")
+        )
 
-        row = {"day": pd.to_datetime(d).strftime("%a %d %b")}
+        row = {"day": pd.to_datetime(d).strftime("%a, %d %b")}
         for bucket_name in ["0–6h", "6–12h", "12–18h", "18–24h"]:
             subset = day_df[day_df["bucket"] == bucket_name]
             if subset.empty:
@@ -86,8 +136,9 @@ def build_cloud_cover_summary(df: pd.DataFrame) -> pd.DataFrame:
                 row[bucket_name] = (
                     f'<div style="width:25px;height:25px;background:{color};border-radius:4px;"></div>'
                 )
+        row["moon"] = f"{get_moon_illumination(day):.0f}%"
         rows.append(row)
-        rows[0]["day"] = "<b>Today</b>"
+    rows[0]["day"] = "<b>Today</b>"
 
     return pd.DataFrame(rows)
 
@@ -136,67 +187,79 @@ def get_forecast_for_location(db_path: str, lat: float, lon: float) -> pd.DataFr
     return df
 
 
-def get_sunrise_sunset(
-    date: datetime, lat, lon, elevation=0, timezone=timezone.utc, type="civil"
+def get_moon_illumination(date: datetime):
+    ts = load.timescale()
+    t = ts.from_datetime(date)
+
+    eph = load("de421.bsp")
+    sun, moon, earth = eph["sun"], eph["moon"], eph["earth"]
+
+    e = earth.at(t)
+    m = e.observe(moon).apparent()
+
+    return 100.0 * m.fraction_illuminated(sun)
+
+
+def get_moon_up_illumination(
+    start_dt: datetime,
+    end_dt: datetime,
+    latitude: float,
+    longitude: float,
+    tz: ZoneInfo,
+    elevation_m: float = 0.0,
 ):
     """
-    Compute sunrise and sunset for given date and location.
+    Returns a list of (datetime, event) tuples,
+    where event is 'moonrise' or 'moonset'.
     """
-    location = EarthLocation.from_geodetic(lat=lat, lon=lon, height=elevation)
+    # Ensure timezone-awareness
+    if start_dt.tzinfo is None:
+        start_dt = start_dt.replace(tzinfo=tz)
+    if end_dt.tzinfo is None:
+        end_dt = end_dt.replace(tzinfo=tz)
 
-    # Sample times every 2 minutes across the whole day
-    date = date.strftime("%Y-%m-%d")
-    times = Time(f"{date} 00:00:00") + np.linspace(0, 24, 24 * 300) * u.hour
+    # create an array of datetimes between start_dt and end_dt at 1-minute intervals
+    times = [
+        start_dt + timedelta(minutes=1 * i)
+        for i in range(int((end_dt - start_dt).total_seconds() // 60))
+    ]
+    times = np.array(times)
+    # create a corresponding numpy array initialized with np.nan
+    illumination = np.full(len(times), np.nan)
 
-    # Sun altitude for each sample
-    altaz = get_sun(times).transform_to(
-        AltAz(obstime=times, location=location, pressure=1000 * u.hPa)
-    )
-    altitudes = altaz.alt.deg
+    # Skyfield setup
+    ts = load.timescale()
+    eph = load("de421.bsp")
+    moon = eph["Moon"]
+    earth = eph["Earth"]
+    observer = earth + wgs84.latlon(latitude, longitude, elevation_m)
 
-    if type == "civil":
-        altitudes_corrected = (
-            altitudes + 0.833
-        )  # atmospheric refraction + solar radius for sunrise
-    elif type == "astronomical":
-        altitudes_corrected = altitudes + 18.0  # astronomical twilight
+    # Convert to Skyfield time
+    t0 = ts.from_datetime(start_dt)
+    t1 = ts.from_datetime(end_dt)
 
-    # Find index where altitude crosses 0 degrees (sunrise/set)
-    sign = np.sign(altitudes_corrected)
-    crossings = np.where(np.diff(sign))[0]
+    t_r, _ = almanac.find_risings(observer, moon, t0, t1)
+    t_s, _ = almanac.find_settings(observer, moon, t0, t1)
 
-    if len(crossings) < 2:
-        return None, None  # Polar day or night
+    if t_s[0] < t_r[0]:
+        # Moon is already up at start_dt
+        t_r = np.insert(t_r, 0, t0)
 
-    sunrise_time = times[crossings[0]].to_datetime(timezone=timezone)
-    sunset_time = times[crossings[1]].to_datetime(timezone=timezone)
+    for r, s in zip(t_r, t_s):
+        r = r.utc_datetime().astimezone(tz)
+        s = s.utc_datetime().astimezone(tz)
+        ill = get_moon_illumination(r + (s - r) / 2)
+        illumination = np.where((times >= r) & (times <= s), ill, illumination)
+        print(
+            "Rise:",
+            r,
+            "Set:",
+            s,
+        )
 
-    return sunrise_time, sunset_time
-
-
-def get_moon_altitudes(time_range, lat, lon, elevation=0, timezone=timezone.utc):
-    """
-    Compute moonrise and moonset for given date and location using altitude crossings.
-    """
-    location = EarthLocation.from_geodetic(lat=lat, lon=lon, height=elevation)
-
-    # Sample times every 30 seconds across the time range
-    start = time_range[0].astimezone(ZoneInfo("UTC")).strftime("%Y-%m-%d %H:%M:%S")
-    end = time_range[1].astimezone(ZoneInfo("UTC")).strftime("%Y-%m-%d %H:%M:%S")
-    duration_hours = (time_range[1] - time_range[0]).total_seconds() / 3600
-    times = (
-        Time(start) + np.linspace(0, duration_hours, int(duration_hours * 120)) * u.hour
-    )
-    # Compute moon altitude
-    altaz = get_moon(times).transform_to(
-        AltAz(obstime=times, location=location, pressure=1000 * u.hPa)
-    )
-    times = [t.to_datetime(timezone=timezone) for t in times]
-
-    return times, altaz.alt.deg
+    return times, illumination
 
 
-# Convert values to 2D arrays (1 row heatmaps)
 def to_2d(values):
     return np.expand_dims(values, axis=0)
 
@@ -267,37 +330,13 @@ def get_address_text(address: dict):
 
 def main():
     st.set_page_config(page_title="Astro Forecast", layout="wide")
-    ss = st.session_state
 
-    # ---------- SESSION STATE INITIALIZATION ----------
+    ss = st.session_state
     if "lat" not in ss:
         ss.lat = None
     if "lon" not in ss:
         ss.lon = None
-    # if "clear_next_run" not in ss:
-    #     ss.clear_next_run = True
 
-    # Create placeholders ONCE
-    # if "location_container" not in ss:
-    #     ss.location_container = st.empty()
-    # # if "map_container" not in ss:
-    # #     ss.map_container = st.empty()
-    # # if "chart_container" not in ss:
-    # #     ss.chart_container = st.empty()
-    # if "summary_container" not in ss:
-    #     ss.summary_container = st.empty()
-    # if "info_container" not in ss:
-    #     ss.info_container = st.empty()
-
-    # If a new render cycle is requested, clear everything ONCE
-    # if ss.clear_next_run:
-    #     # ss.location_container.empty()
-    #     ss.summary_container.empty()
-    #     ss.info_container.empty()
-    #     # Reset flag and continue execution
-    #     ss.clear_next_run = False
-
-    # get update time from forecast file
     grib_files = os.listdir("latest_wrf_files")
     update_time = get_update_time(grib_files[0])
 
@@ -307,7 +346,6 @@ def main():
         if loc is not None:
             ss.lat = loc["coords"]["latitude"]
             ss.lon = 360 + loc["coords"]["longitude"]
-            # ss.clear_next_run = True
             st.rerun()
         else:
             st.info("Requesting location permission from browser…")
@@ -315,7 +353,6 @@ def main():
 
     col_map, col_geo_info = st.columns([0.4, 0.6])
 
-    # containers created inside columns – this guarantees side-by-side display
     with col_map:
         m = folium.Map(location=[ss.lat, ss.lon], zoom_start=11)
 
@@ -328,9 +365,6 @@ def main():
         # Enable clicking
         m.add_child(folium.LatLngPopup())
 
-        # ---------------------------
-        # Step 4: Render map and capture clicks
-        # ---------------------------
         map_data = st_folium(
             m, width=550, height=350, returned_objects=["last_clicked"]
         )
@@ -338,7 +372,6 @@ def main():
         if map_data and map_data.get("last_clicked"):
             ss.lat = map_data["last_clicked"]["lat"]
             ss.lon = map_data["last_clicked"]["lng"]
-            # ss.clear_next_run = True
             st.rerun()
     with col_geo_info:
         try:
@@ -362,47 +395,48 @@ def main():
                             """,
                     unsafe_allow_html=True,
                 )
+                st.markdown(
+                    f"<small>Latest forecast update (UTC): {update_time.strftime('%Y-%m-%d %H:%M')}</small>",
+                    unsafe_allow_html=True,
+                )
         except Exception as e:
             st.error(f"Error: {e}")
 
-    col_table, col_chart = st.columns([0.3, 0.7])
+    with st.spinner("Loading forecast data..."):
+        df = get_forecast_for_location("forecast.duckdb", ss.lat, ss.lon)
+        df["time"] = pd.to_datetime(df["forecast_hour"], format="%Y%m%d%H", utc=True)
+        df = df[df["time"] >= datetime.now(timezone.utc) - timedelta(hours=3)]
 
-    # containers created inside columns – this guarantees side-by-side display
+        hours = df["time"].to_list()
+        hours = [t.astimezone(ZoneInfo("America/Sao_Paulo")) for t in hours]
+        tcc = df["cloud"].to_numpy()
+        temp = (df["temp"] - 273.15).to_numpy()
+        dew = (df["dewpoint"] - 273.15).to_numpy()
+
+        time, moon_is_up = get_moon_up_illumination(
+            datetime.now(tz=ZoneInfo("America/Sao_Paulo")),
+            hours[-1],
+            ss.lat,
+            ss.lon,
+            tz=ZoneInfo("America/Sao_Paulo"),
+        )
+
+    col_table, col_chart = st.columns([0.35, 0.65])
     with col_table:
         table_container = st.empty()
     with col_chart:
         chart_container = st.empty()
 
-    # store them in session_state only once so that they survive reruns
-    # if "map_container" not in ss:
-    #     ss.map_container = map_container
-    # if "chart_container" not in ss:
-    #     ss.chart_container = chart_container
-
-    # if ss.clear_next_run:
-    #     ss.map_container.empty()
-    #     ss.chart_container.empty()
-    #     ss.clear_next_run = False
-
     with table_container:
-        with st.spinner("Loading forecast..."):
-            df = get_forecast_for_location("forecast.duckdb", ss.lat, ss.lon)
-            df["time"] = pd.to_datetime(
-                df["forecast_hour"], format="%Y%m%d%H", utc=True
-            )
-            hours = df["time"].to_list()
-            hours = [t.astimezone(ZoneInfo("America/Sao_Paulo")) for t in hours]
-            tcc = df["cloud"].to_numpy()
-            temp = (df["temp"] - 273.15).to_numpy()
-            dew = (df["dewpoint"] - 273.15).to_numpy()
-        summary_df = build_cloud_cover_summary(df)
+        with st.spinner("Creating summary table..."):
+            summary_df = build_cloud_cover_summary(df)
         st.write(
             summary_df.to_html(escape=False, justify="center", index=False),
             unsafe_allow_html=True,
         )
 
     with chart_container:
-        with st.spinner("Loading forecast..."):
+        with st.spinner("Creating forecast chart..."):
             fig = make_subplots(
                 rows=3,
                 cols=1,
@@ -452,6 +486,24 @@ def main():
                 col=1,
             )
             fig.add_trace(
+                go.Heatmap(
+                    z=to_2d(moon_is_up),
+                    x=time,
+                    y=[""],
+                    colorscale=blue_colorscale,
+                    zmin=0,
+                    zmax=1,
+                    colorbar=None,
+                    showscale=False,
+                    opacity=0.9,
+                    hoverinfo="skip",
+                    name="Moon",
+                ),
+                row=2,
+                col=1,
+            )
+
+            fig.add_trace(
                 go.Scatter(
                     x=hours,
                     y=temp,
@@ -480,32 +532,7 @@ def main():
                 col=1,
             )
 
-            time, moon_alt = get_moon_altitudes(
-                [hours[0], hours[-1]],
-                ss.lat,
-                ss.lon,
-                timezone=ZoneInfo("America/Sao_Paulo"),
-            )
-            moon_is_up = np.where(moon_alt > 0, 1, np.nan)
-            fig.add_trace(
-                go.Heatmap(
-                    z=to_2d(moon_is_up),
-                    x=time,
-                    y=[""],
-                    colorscale="Greys_r",
-                    zmin=0,
-                    zmax=1,
-                    colorbar=None,
-                    showscale=False,
-                    opacity=0.9,
-                    hoverinfo="skip",
-                    name="Moon",
-                ),
-                row=2,
-                col=1,
-            )
-
-            # add vertical lines for now, midnight, sunrise/sunset
+            # add vertical lines for now and shading for day/night
             now = datetime.now(tz=ZoneInfo("America/Sao_Paulo"))
             fig.add_shape(
                 type="line",
@@ -521,18 +548,11 @@ def main():
             max_day_delta = (max_date - now).days + 1
             for day_delta in range(max_day_delta):
                 d = now.replace(hour=0, minute=0, second=0) + timedelta(days=day_delta)
-                sunset, sunrise = get_sunrise_sunset(
+                sunrise, sunset, sr_astronomical, ss_astronomical = get_sun_times(
                     d,
                     ss.lat,
                     ss.lon,
-                    timezone=ZoneInfo("America/Sao_Paulo"),
-                )
-                ss_astronomical, sr_astronomical = get_sunrise_sunset(
-                    d,
-                    ss.lat,
-                    ss.lon,
-                    timezone=ZoneInfo("America/Sao_Paulo"),
-                    type="astronomical",
+                    tz=ZoneInfo("America/Sao_Paulo"),
                 )
                 # daytime shading
                 fig.add_shape(
@@ -659,16 +679,6 @@ def main():
                 "staticPlot": False,  # must be False or pan won't work
             },
         )
-
-    # --- cloud cover summary table container ---
-    # with ss.summary_container:
-
-    # Show last update time
-    # with ss.info_container:
-    st.markdown(
-        f"<small>Latest forecast update (UTC): {update_time.strftime('%Y-%m-%d %H:%M')}</small>",
-        unsafe_allow_html=True,
-    )
 
 
 if __name__ == "__main__":
