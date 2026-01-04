@@ -26,11 +26,22 @@ blue_scale = [
     "#B8DBFF",
     "#E6F2FF",
 ]
-bounderies = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
-blue_colorscale = []
+bounderies_cloud = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
+colorscale_cloud = []
 for i in range(len(blue_scale)):
-    blue_colorscale.append([bounderies[i], blue_scale[i]])
-    blue_colorscale.append([bounderies[i + 1], blue_scale[i]])
+    colorscale_cloud.append([bounderies_cloud[i], blue_scale[i]])
+    colorscale_cloud.append([bounderies_cloud[i + 1], blue_scale[i]])
+
+blue_scale_transparency = blue_scale[::-1]
+bounderies_transparency = [0, 0.2, 0.4, 0.65, 0.85, 1.0]
+colorscale_transparency = []
+for i in range(len(blue_scale)):
+    colorscale_transparency.append(
+        [bounderies_transparency[i], blue_scale_transparency[i]]
+    )
+    colorscale_transparency.append(
+        [bounderies_transparency[i + 1], blue_scale_transparency[i]]
+    )
 
 
 def get_sun_times(date: datetime, latitude: float, longitude: float, tz: ZoneInfo):
@@ -85,8 +96,8 @@ def get_sun_times(date: datetime, latitude: float, longitude: float, tz: ZoneInf
 def get_color_for_value(value: float) -> str:
     """Return appropriate hex color from blue_scale for cloud-cover percentage (0–100)."""
     v = value / 100
-    for i in range(len(bounderies) - 1):
-        if bounderies[i] <= v < bounderies[i + 1]:
+    for i in range(len(bounderies_cloud) - 1):
+        if bounderies_cloud[i] <= v < bounderies_cloud[i + 1]:
             return blue_scale[i]
     return blue_scale[-1]
 
@@ -175,7 +186,8 @@ def get_forecast_for_location(db_path: str, lat: float, lon: float) -> pd.DataFr
             forecast_hour,
             cloud,
             temp,
-            dewpoint
+            dewpoint,
+            transparency
         FROM forecast
         WHERE lat = ? AND lon = ?
         ORDER BY forecast_hour ASC
@@ -250,12 +262,6 @@ def get_moon_up_illumination(
         s = s.utc_datetime().astimezone(tz)
         ill = get_moon_illumination(r + (s - r) / 2)
         illumination = np.where((times >= r) & (times <= s), ill, illumination)
-        print(
-            "Rise:",
-            r,
-            "Set:",
-            s,
-        )
 
     return times, illumination
 
@@ -375,12 +381,9 @@ def main():
             st.rerun()
     with col_geo_info:
         try:
-            print("lat:", ss.lat, "lon:", ss.lon)
             location = geolocator.reverse((ss.lat, ss.lon), language="en")
-            print(location.raw)
             address = location.raw["address"] if location else "No address found"
             formated_address = get_address_text(address)
-            print("formated_address:", formated_address)
             if formated_address is not None:
                 st.markdown(
                     f"<big>**Forecast for** {formated_address}</big>",
@@ -405,16 +408,18 @@ def main():
     with st.spinner("Loading forecast data..."):
         df = get_forecast_for_location("forecast.duckdb", ss.lat, ss.lon)
         df["time"] = pd.to_datetime(df["forecast_hour"], format="%Y%m%d%H", utc=True)
-        df = df[df["time"] >= datetime.now(timezone.utc) - timedelta(hours=3)]
+        df = df[df["time"] >= datetime.now(timezone.utc) - timedelta(hours=4)]
+        print(df.columns)
 
         hours = df["time"].to_list()
         hours = [t.astimezone(ZoneInfo("America/Sao_Paulo")) for t in hours]
         tcc = df["cloud"].to_numpy()
-        temp = (df["temp"] - 273.15).to_numpy()
-        dew = (df["dewpoint"] - 273.15).to_numpy()
+        transparency = df["transparency"].to_numpy()
+        temp = df["temp"].to_numpy()
+        dew = df["dewpoint"].to_numpy()
 
         time, moon_is_up = get_moon_up_illumination(
-            datetime.now(tz=ZoneInfo("America/Sao_Paulo")),
+            hours[0],
             hours[-1],
             ss.lat,
             ss.lon,
@@ -438,12 +443,13 @@ def main():
     with chart_container:
         with st.spinner("Creating forecast chart..."):
             fig = make_subplots(
-                rows=3,
+                rows=4,
                 cols=1,
                 shared_xaxes=True,
-                vertical_spacing=0.05,
-                row_heights=[0.04, 0.02, 0.10],
+                vertical_spacing=0.06,
+                row_heights=[0.04, 0.02, 0.02, 0.10],
                 specs=[
+                    [{"type": "heatmap"}],
                     [{"type": "heatmap"}],
                     [{"type": "heatmap"}],
                     [{"type": "scatter"}],
@@ -456,7 +462,7 @@ def main():
                     z=to_2d(tcc),
                     x=np.array(hours) + timedelta(minutes=30),
                     y=[""],
-                    colorscale=blue_colorscale,
+                    colorscale=colorscale_cloud,
                     zmin=0,
                     zmax=100,
                     colorbar=None,
@@ -473,7 +479,7 @@ def main():
                     z=to_2d(tcc),
                     x=np.array(hours) + timedelta(minutes=30),
                     y=[""],
-                    colorscale=blue_colorscale,
+                    colorscale=colorscale_cloud,
                     zmin=0,
                     zmax=100,
                     colorbar=None,
@@ -487,10 +493,27 @@ def main():
             )
             fig.add_trace(
                 go.Heatmap(
+                    z=to_2d(transparency),
+                    x=np.array(hours) + timedelta(minutes=30),
+                    y=[""],
+                    colorscale=colorscale_transparency,
+                    zmin=0,
+                    zmax=1,
+                    colorbar=None,
+                    showscale=False,
+                    opacity=0.9,
+                    hoverinfo="skip",
+                    name="Transparency",
+                ),
+                row=2,
+                col=1,
+            )
+            fig.add_trace(
+                go.Heatmap(
                     z=to_2d(moon_is_up),
                     x=time,
                     y=[""],
-                    colorscale=blue_colorscale,
+                    colorscale=colorscale_cloud,
                     zmin=0,
                     zmax=1,
                     colorbar=None,
@@ -499,7 +522,7 @@ def main():
                     hoverinfo="skip",
                     name="Moon",
                 ),
-                row=2,
+                row=3,
                 col=1,
             )
 
@@ -514,7 +537,7 @@ def main():
                     name="Temperature",
                     hoverinfo="skip",
                 ),
-                row=3,
+                row=4,
                 col=1,
             )
             fig.add_trace(
@@ -528,7 +551,7 @@ def main():
                     name="Dew Point",
                     hoverinfo="skip",
                 ),
-                row=3,
+                row=4,
                 col=1,
             )
 
@@ -606,9 +629,17 @@ def main():
                 showgrid=False,
             )
             fig.update_yaxes(
-                title_text="Moon",
+                title_text="Transp",
                 ticks="",
                 row=2,
+                col=1,
+                fixedrange=True,
+                showgrid=False,
+            )
+            fig.update_yaxes(
+                title_text="Moon",
+                ticks="",
+                row=3,
                 col=1,
                 fixedrange=True,
                 showgrid=False,
@@ -618,7 +649,7 @@ def main():
                 ticks="",
                 showgrid=False,
                 showticklabels=False,
-                row=3,
+                row=4,
                 col=1,
                 fixedrange=True,
             )
@@ -634,15 +665,15 @@ def main():
                 side="top",
                 autorange=False,
                 range=[
-                    datetime.now() - timedelta(hours=5),
-                    datetime.now() + timedelta(days=1),
+                    datetime.now(tz=ZoneInfo("America/Sao_Paulo")) - timedelta(hours=3),
+                    datetime.now(tz=ZoneInfo("America/Sao_Paulo")) + timedelta(days=1),
                 ],
             )
             dates = df["time"].dt.date.unique()
             noons = [pd.Timestamp(day) + pd.Timedelta(hours=12) for day in dates]
             ticktexts = [d.strftime("%a %d %b") for d in noons]
             fig.update_layout(
-                xaxis4=dict(
+                xaxis5=dict(
                     overlaying="x",  # draw on top of x-axis
                     matches="x",
                     side="top",
@@ -655,9 +686,9 @@ def main():
                 ),
                 margin=dict(t=60, b=10),
             )
-            fig.data[1].update(xaxis="x4")
+            fig.data[1].update(xaxis="x5")
             fig.update_xaxes(ticks="", row=2, col=1)
-            fig.update_xaxes(showticklabels=False, row=3, col=1)
+            fig.update_xaxes(showticklabels=False, row=4, col=1)
             fig.update_layout(
                 paper_bgcolor="#181830",
                 plot_bgcolor="#181830",
