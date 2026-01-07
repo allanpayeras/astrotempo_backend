@@ -22,7 +22,7 @@ from skyfield import almanac
 blue_scale = [
     "#005bb5",
     "#0069D1",
-    "#2E96FF",
+    "#4EA4FB",
     "#B8DBFF",
     "#E6F2FF",
 ]
@@ -360,7 +360,7 @@ def main():
     col_map, col_geo_info = st.columns([0.4, 0.6])
 
     with col_map:
-        m = folium.Map(location=[ss.lat, ss.lon], zoom_start=11)
+        m = folium.Map(location=[ss.lat, ss.lon], zoom_start=12)
 
         folium.Marker(
             [ss.lat, ss.lon],
@@ -409,7 +409,6 @@ def main():
         df = get_forecast_for_location("forecast.duckdb", ss.lat, ss.lon)
         df["time"] = pd.to_datetime(df["forecast_hour"], format="%Y%m%d%H", utc=True)
         df = df[df["time"] >= datetime.now(timezone.utc) - timedelta(hours=4)]
-        print(df.columns)
 
         hours = df["time"].to_list()
         hours = [t.astimezone(ZoneInfo("America/Sao_Paulo")) for t in hours]
@@ -446,8 +445,8 @@ def main():
                 rows=4,
                 cols=1,
                 shared_xaxes=True,
-                vertical_spacing=0.06,
-                row_heights=[0.04, 0.02, 0.02, 0.10],
+                vertical_spacing=0.05,
+                row_heights=[0.02, 0.02, 0.02, 0.10],
                 specs=[
                     [{"type": "heatmap"}],
                     [{"type": "heatmap"}],
@@ -465,9 +464,10 @@ def main():
                     colorscale=colorscale_cloud,
                     zmin=0,
                     zmax=100,
+                    xgap=8,
                     colorbar=None,
                     showscale=False,
-                    opacity=0.9,
+                    opacity=1,
                     hoverinfo="skip",
                     name="Cloud Cover",
                 ),
@@ -482,6 +482,7 @@ def main():
                     colorscale=colorscale_cloud,
                     zmin=0,
                     zmax=100,
+                    xgap=8,
                     colorbar=None,
                     showscale=False,
                     opacity=0,
@@ -493,39 +494,39 @@ def main():
             )
             fig.add_trace(
                 go.Heatmap(
-                    z=to_2d(transparency),
-                    x=np.array(hours) + timedelta(minutes=30),
+                    z=to_2d(moon_is_up),
+                    x=time,
                     y=[""],
-                    colorscale=colorscale_transparency,
+                    colorscale=colorscale_cloud,
                     zmin=0,
-                    zmax=1,
+                    zmax=100,
                     colorbar=None,
                     showscale=False,
-                    opacity=0.9,
+                    opacity=1,
                     hoverinfo="skip",
-                    name="Transparency",
+                    name="Moon",
                 ),
                 row=2,
                 col=1,
             )
             fig.add_trace(
                 go.Heatmap(
-                    z=to_2d(moon_is_up),
-                    x=time,
+                    z=to_2d(transparency),
+                    x=np.array(hours) + timedelta(minutes=30),
                     y=[""],
-                    colorscale=colorscale_cloud,
+                    colorscale=colorscale_transparency,
                     zmin=0,
                     zmax=1,
+                    xgap=8,
                     colorbar=None,
                     showscale=False,
-                    opacity=0.9,
+                    opacity=1,
                     hoverinfo="skip",
-                    name="Moon",
+                    name="Transparency",
                 ),
                 row=3,
                 col=1,
             )
-
             fig.add_trace(
                 go.Scatter(
                     x=hours,
@@ -629,7 +630,7 @@ def main():
                 showgrid=False,
             )
             fig.update_yaxes(
-                title_text="Transp",
+                title_text="Moon",
                 ticks="",
                 row=2,
                 col=1,
@@ -637,7 +638,7 @@ def main():
                 showgrid=False,
             )
             fig.update_yaxes(
-                title_text="Moon",
+                title_text="Transp",
                 ticks="",
                 row=3,
                 col=1,
