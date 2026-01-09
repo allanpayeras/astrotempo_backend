@@ -1,7 +1,14 @@
 # temporary data files
 data_tmp/
 latest_wrf_files/
+historical_wrf_data_tmp/
+
+forecast_tmp.duckdb
 forecast.duckdb
+historical_wrf_data_tmp.duckdb
+historical_wrf_data.duckdb
+
+de421.bsp
 
 # cron log file
 cron.log
