@@ -569,7 +569,7 @@ def main():
                 line=dict(color="red", width=3, dash="solid"),
             )
             max_date = np.max(hours)
-            max_day_delta = (max_date - now).days + 1
+            max_day_delta = (max_date - now).days + 2
             for day_delta in range(max_day_delta):
                 d = now.replace(hour=0, minute=0, second=0) + timedelta(days=day_delta)
                 sunrise, sunset, sr_astronomical, ss_astronomical = get_sun_times(
