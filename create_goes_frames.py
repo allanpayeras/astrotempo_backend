@@ -155,6 +155,25 @@ def create_goes_cog(goes_nc: Path, output_dir: Path):
     print(f"Created COG: {cog.name}")
 
 
+def clean_up_cog_dir(goes_files: list[Path], output_dir: Path):
+    """
+    Remove COGs that do not have a corresponding GOES file.
+    """
+    keep_cog_files = set()
+    for file in goes_files:
+        ts = datetime.strptime(file.stem.split("_s")[1][:13], "%Y%j%H%M%S").replace(
+            tzinfo=timezone.utc
+        )
+        base = f"goes_{ts:%Y%m%d_%H%M%S}_cog.tif"
+        keep_cog_files.add(base)
+
+    all_cog_files = sorted(output_dir.glob("goes_*_cog.tif"))
+    for cog_file in all_cog_files:
+        if cog_file.name not in keep_cog_files:
+            print(f"Removing obsolete COG: {cog_file.name}")
+            cog_file.unlink()
+
+
 def main():
     goes_path = Path(GOES_DATA_DIR)
     if not goes_path.exists():
@@ -166,6 +185,8 @@ def main():
 
     for file in goes_files:
         create_goes_cog(file, output_dir)
+
+    clean_up_cog_dir(goes_files, output_dir)
 
 
 if __name__ == "__main__":
