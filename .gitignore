@@ -2,6 +2,12 @@
 data_tmp/
 latest_wrf_files/
 historical_wrf_data_tmp/
+goes_data/
+goes_cog/
+
+sandbox/frames/
+sandbox/goes_data_cache/
+
 
 forecast_tmp.duckdb
 forecast.duckdb
@@ -11,7 +17,7 @@ historical_wrf_data.duckdb
 de421.bsp
 
 # cron log file
-cron.log
+logs/
 
 # Environment
 env/
