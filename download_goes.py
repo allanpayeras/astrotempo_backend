@@ -55,7 +55,7 @@ def main():
         Path(GOES_DIR).mkdir(parents=True, exist_ok=True)
 
     now = datetime.now(tz=timezone.utc)
-    start_time = now - timedelta(hours=2)
+    start_time = now - timedelta(hours=6)
     print(f"Downloading GOES data from {start_time} to {now}")
 
     _ = goes_timerange(
