@@ -17,7 +17,9 @@ from streamlit_folium import st_folium
 from geopy.geocoders import Nominatim
 from skyfield.api import load, wgs84
 from skyfield import almanac
+from streamlit.components.v1 import html
 
+GOES_COG_DIR = "./goes_cog"
 
 blue_scale = [
     "#005bb5",
@@ -711,6 +713,65 @@ def main():
                 "staticPlot": False,  # must be False or pan won't work
             },
         )
+
+    st.markdown("### Satellite View")
+
+    TIMESTAMPS = []
+
+    cog_files = sorted(os.listdir(GOES_COG_DIR))
+    for file in cog_files:
+        splitted = file.split("_")
+        ts = splitted[1] + "_" + splitted[2]
+        TIMESTAMPS.append(ts)
+
+    timestamp = st.selectbox("Time", TIMESTAMPS)
+
+    tile_url = "http://localhost:8000/tiles/{timestamp}/{z}/{x}/{y}.png"
+
+    leaflet_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="utf-8"/>
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        #map {{
+        width: 100%;
+        height: 650px;
+        }}
+    </style>
+    </head>
+    <body>
+    <div id="map"></div>
+    <script>
+    var map = L.map('map', {{
+        center: [-15, -55],
+        zoom: 4,
+        minZoom: 4,
+        maxZoom: 11,
+        maxBounds: [[-35, -75], [5.5, -34]],
+        maxBoundsViscosity: 1.0
+    }});
+
+    L.tileLayer('{tile_url.replace("{timestamp}", timestamp)}', {{
+        opacity: 1.0,
+        tms: false
+    }}).addTo(map);
+
+    L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
+        attribution: '© OpenStreetMap',
+        opacity: 0.1
+    }}).addTo(map);
+    </script>
+    </body>
+    </html>
+    """
+
+    html(leaflet_html, width=600, height=600)
 
 
 if __name__ == "__main__":
