@@ -4,7 +4,11 @@ from pathlib import Path
 from goes2go.data import goes_timerange, goes_latest
 from datetime import datetime, timedelta, timezone
 
-
+GOES_PRODUCTS = [
+    "ABI-L2-COD",  # Cloud Optical Depth
+    "ABI-L2-ACHT",  # Cloud Top Temperature
+    "ABI-L2-ACHA",  # Cloud Top Height
+]
 GOES_DIR = "./goes_data"
 
 
@@ -33,7 +37,10 @@ def clean_up_goes_data(goes_dir: str, start_time: datetime, end_time: datetime):
 
     # Get list of GOES files in the directory
     goes_path = Path(goes_dir)
-    goes_files = sorted(list(goes_path.glob("**/*.nc")))
+    goes_files = []
+    for product in GOES_PRODUCTS:
+        product_files = sorted(list(goes_path.glob(f"**/*{product}*.nc")))
+        goes_files.extend(product_files)
 
     # loop through files and verify if start observation time is within the desired range
     for file in goes_files:
@@ -55,19 +62,21 @@ def main():
         Path(GOES_DIR).mkdir(parents=True, exist_ok=True)
 
     now = datetime.now(tz=timezone.utc)
-    start_time = now - timedelta(hours=6)
+    start_time = now - timedelta(hours=24)
     print(f"Downloading GOES data from {start_time} to {now}")
 
-    _ = goes_timerange(
-        start=start_time.replace(tzinfo=None),
-        end=now.replace(tzinfo=None),
-        satellite="goes19",
-        product="ABI",
-        domain="F",
-        return_as="filelist",
-        save_dir=GOES_DIR,
-        max_cpus=6,
-    )
+    for product in GOES_PRODUCTS:
+        print(f"Downloading product: {product}")
+        _ = goes_timerange(
+            start=start_time.replace(tzinfo=None),
+            end=now.replace(tzinfo=None),
+            satellite="goes19",
+            product=product,
+            domain="F",
+            return_as="filelist",
+            save_dir=GOES_DIR,
+            max_cpus=6,
+        )
 
     clean_up_goes_data(GOES_DIR, start_time, now)
 
