@@ -1,6 +1,7 @@
 import rasterio
 import subprocess
 import matplotlib
+import shutil
 
 import xarray as xr
 import numpy as np
@@ -21,8 +22,10 @@ GOES_PRODUCTS = [
 ]
 GOES_DATA_DIR = "./goes_data"
 GOES_COG_DIR = "./goes_cog"
-# [min_lon, max_lat, max_lon, min_lat]
-BRAZIL_EXTENT = [-90.0, 20.0, -20.0, -45.0]
+TILE_ROOT = Path("/var/www/tiles")
+# [min_lon, min_lat, max_lon, max_lat]
+BRAZIL_EXTENT = [-90.0, -45.0, -20.0, 20.0]
+ZOOM_RANGE = "0-8"
 
 
 def make_image(ds: xr.Dataset, suffix: str) -> np.ndarray:
@@ -143,8 +146,8 @@ def ch_to_rgba(cloud_height_m: np.ndarray, max_height_m: float = 20000.0) -> np.
     # Masks
     valid = np.isfinite(h) & (h > 0)
     low = valid & (h < 2000)
-    mid = valid & (h >= 2000) & (h < 6000)
-    high = valid & (h >= 6000) & (h <= max_height_m)
+    mid = valid & (h >= 2000) & (h < 7000)
+    high = valid & (h >= 7000) & (h <= max_height_m)
 
     # Assign colors
     rgba[low, :3] = (86, 180, 233)  # light blue
@@ -194,7 +197,7 @@ def create_goes_cog(goes_nc: Path, product: str, output_dir: Path):
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # ------------------------------------------------------------------
-    # 1. Timestamp for naming
+    # Timestamp for naming
     # ------------------------------------------------------------------
     ds = xr.open_dataset(goes_nc)
 
@@ -202,6 +205,7 @@ def create_goes_cog(goes_nc: Path, product: str, output_dir: Path):
         tzinfo=timezone.utc
     )
     base = f"goes_{ts:%Y%m%d_%H%M%S}_{suffix}"
+
     goes_tif = output_dir / f"{base}.tif"
     warped = output_dir / f"{base}_wrp.tif"
     cog = output_dir / f"{base}_cog.tif"
@@ -268,14 +272,16 @@ def create_goes_cog(goes_nc: Path, product: str, output_dir: Path):
         "-r",
         # "near",
         resampling_warp,
-        # "-multi",
+        "-multi",
+        "-srcalpha",
+        "-dstalpha",
         str(goes_tif),
         str(warped),
     ]
     run_cmd(cmd_warp)
 
     # ------------------------------------------------------------------
-    # 3. Convert to COG (Google Maps compatible)
+    # Convert to COG (Google Maps compatible)
     # ------------------------------------------------------------------
     cmd_cog = [
         "gdal_translate",
@@ -283,6 +289,14 @@ def create_goes_cog(goes_nc: Path, product: str, output_dir: Path):
         str(cog),
         "-of",
         "COG",
+        "-b",
+        "1",
+        "-b",
+        "2",
+        "-b",
+        "3",
+        "-b",
+        "4",
         "-ot",
         "Byte",
         "-co",
@@ -294,8 +308,35 @@ def create_goes_cog(goes_nc: Path, product: str, output_dir: Path):
         "-co",
         # "RESAMPLING=NEAREST",
         f"RESAMPLING={resampling_translate}",
+        "-co",
+        "OVERVIEWS=AUTO",
     ]
     run_cmd(cmd_cog)
+
+    # generate static tiles
+    parts = base.split("_")
+
+    timestamp = parts[1] + "_" + parts[2]
+    product = parts[3]
+
+    output_dir = TILE_ROOT / product / timestamp
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"Generating tiles for {cog.name}")
+
+    subprocess.run(
+        [
+            "gdal2tiles.py",
+            "-z",
+            ZOOM_RANGE,
+            "--xyz",
+            "--processes=4",
+            "-w",
+            "none",
+            str(cog),
+            str(output_dir),
+        ]
+    )
 
     goes_tif.unlink()
     warped.unlink()
@@ -324,12 +365,35 @@ def clean_up_cog_dir(goes_files: list[Path], product: str, output_dir: Path):
         base = f"goes_{ts:%Y%m%d_%H%M%S}_{suffix}_cog.tif"
         keep_cog_files.add(base)
 
-    # all_cog_files = sorted(output_dir.glob("goes_*_cth_cog.tif"))
     all_cog_files = sorted(output_dir.glob(f"goes_*_{suffix}_cog.tif"))
     for cog_file in all_cog_files:
         if cog_file.name not in keep_cog_files:
             print(f"Removing obsolete COG: {cog_file.name}")
             cog_file.unlink()
+
+
+def clean_up_tiles_dir(goes_files, product):
+    if product == "ABI-L2-COD":
+        suffix = "cod"
+    elif product == "ABI-L2-ACHT":
+        suffix = "acht"
+    elif product == "ABI-L2-ACHA":
+        suffix = "acha"
+    else:
+        raise ValueError(f"Unsupported product: {product}")
+
+    keep_tile_dirs = set()
+    for file in goes_files:
+        ts = datetime.strptime(file.stem.split("_e")[1][:13], "%Y%j%H%M%S").replace(
+            tzinfo=timezone.utc
+        )
+        dir_path = TILE_ROOT / suffix / f"{ts:%Y%m%d_%H%M%S}"
+        keep_tile_dirs.add(dir_path)
+
+    for product_dir in (TILE_ROOT / suffix).iterdir():
+        if product_dir.is_dir() and product_dir not in keep_tile_dirs:
+            print(f"Removing obsolete tile folder: {product_dir}")
+            shutil.rmtree(product_dir)
 
 
 def main():
@@ -347,6 +411,7 @@ def main():
             create_goes_cog(file, product, output_dir)
 
         clean_up_cog_dir(goes_files, product, output_dir)
+        clean_up_tiles_dir(goes_files, product)
 
 
 if __name__ == "__main__":
