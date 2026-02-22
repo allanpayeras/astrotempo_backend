@@ -2,6 +2,8 @@ import rasterio
 import subprocess
 import matplotlib
 import shutil
+import tempfile
+import os
 
 import xarray as xr
 import numpy as np
@@ -314,29 +316,49 @@ def create_goes_cog(goes_nc: Path, product: str, output_dir: Path):
     run_cmd(cmd_cog)
 
     # generate static tiles
-    parts = base.split("_")
+    # ------------------------------------------------------------------
+    # Generate tiles safely in temporary location
+    # ------------------------------------------------------------------
 
+    parts = base.split("_")
     timestamp = parts[1] + "_" + parts[2]
     product = parts[3]
 
-    output_dir = TILE_ROOT / product / timestamp
-    output_dir.mkdir(parents=True, exist_ok=True)
+    final_dir = TILE_ROOT / product / timestamp
+    parent_dir = TILE_ROOT / product
+    parent_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"Generating tiles for {cog.name}")
 
-    subprocess.run(
-        [
-            "gdal2tiles.py",
-            "-z",
-            ZOOM_RANGE,
-            "--xyz",
-            "--processes=4",
-            "-w",
-            "none",
-            str(cog),
-            str(output_dir),
-        ]
-    )
+    # Create temp directory on SAME filesystem to ensure os.replace is atomic
+    with tempfile.TemporaryDirectory(dir=parent_dir, prefix="tmp_") as tmp_dir:
+        tmp_path = Path(tmp_dir)
+
+        result = subprocess.run(
+            [
+                "gdal2tiles.py",
+                "-z",
+                ZOOM_RANGE,
+                "--xyz",
+                "--processes=4",
+                "-w",
+                "none",
+                str(cog),
+                str(tmp_path),
+            ]
+        )
+
+        if result.returncode != 0:
+            raise RuntimeError("Tile generation failed")
+
+        # Remove old version if exists
+        if final_dir.exists():
+            shutil.rmtree(final_dir)
+
+        # Atomic rename (same filesystem)
+        os.replace(tmp_path, final_dir)
+
+    print(f"Tiles ready: {final_dir}")
 
     goes_tif.unlink()
     warped.unlink()

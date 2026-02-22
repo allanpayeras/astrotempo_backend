@@ -20,6 +20,7 @@ def get_available_timestamps(product: str) -> List[str]:
         name
         for name in os.listdir(product_path)
         if os.path.isdir(os.path.join(product_path, name))
+        and not name.startswith("tmp_")
     ]
 
     return sorted(timestamps)
