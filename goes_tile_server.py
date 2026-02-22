@@ -1,49 +1,42 @@
-from fastapi import FastAPI, HTTPException, Response
-from rio_tiler.io import COGReader
-from rio_tiler.utils import render
-from pathlib import Path
-from fastapi.middleware.cors import CORSMiddleware
+import os
 
-COG_DIR = Path("./goes_cog")
-# Allowed satellite products
+from typing import List
+from fastapi import FastAPI, HTTPException
+
+TILE_ROOT = "/var/www/tiles"
 VALID_PRODUCTS = {"cod", "acha", "acht"}
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["GET"],
-    allow_headers=["*"],
-)
+
+def get_available_timestamps(product: str) -> List[str]:
+    product_path = os.path.join(TILE_ROOT, product)
+
+    if not os.path.isdir(product_path):
+        return []
+
+    # Only keep directories (timestamps)
+    timestamps = [
+        name
+        for name in os.listdir(product_path)
+        if os.path.isdir(os.path.join(product_path, name))
+    ]
+
+    return sorted(timestamps)
 
 
-@app.get("/tiles/{product}/{timestamp}/{z}/{x}/{y}.png")
-def tile(
-    product: str,
-    timestamp: str,
-    z: int,
-    x: int,
-    y: int,
-):
+@app.get("/timestamps/{product}")
+def list_timestamps(product: str):
     if product not in VALID_PRODUCTS:
         raise HTTPException(status_code=400, detail="Invalid product")
 
-    cog_path = COG_DIR / f"goes_{timestamp}_{product}_cog.tif"
-    if not cog_path.exists():
-        raise HTTPException(status_code=404, detail="COG not found")
+    timestamps = get_available_timestamps(product)
 
-    with COGReader(cog_path) as cog:
-        img = cog.tile(x, y, z, tilesize=256)
+    if not timestamps:
+        raise HTTPException(status_code=404, detail="No timestamps found")
 
-    data = render(img.data, format="PNG")
-    return Response(
-        content=data,
-        media_type="image/png",
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Cross-Origin-Resource-Policy": "cross-origin",
-            "Cache-Control": "public, max-age=86400",
-        },
-    )
+    return {
+        "product": product,
+        "count": len(timestamps),
+        "timestamps": timestamps,
+    }
