@@ -62,7 +62,7 @@ def main():
         Path(GOES_DIR).mkdir(parents=True, exist_ok=True)
 
     now = datetime.now(tz=timezone.utc)
-    start_time = now - timedelta(hours=24)
+    start_time = now - timedelta(hours=4)
     print(f"Downloading GOES data from {start_time} to {now}")
 
     for product in GOES_PRODUCTS:
