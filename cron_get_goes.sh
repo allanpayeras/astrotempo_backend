@@ -12,5 +12,8 @@ cd /home/payeras/personal_projects/astro-weather/
 python -u /home/payeras/personal_projects/astro-weather/download_goes.py
 python -u /home/payeras/personal_projects/astro-weather/create_goes_frames.py
 
+# Set permissions for the tiles directory
+chmod -R 755 /var/www/tiles
+
 echo "Finished execution at"
 date
