@@ -1,0 +1,8 @@
+[theme]
+base="dark"
+
+primaryColor="#3dd5f3"                # soft cyan glow
+backgroundColor="#0b0f19"             # deep space blue-black
+secondaryBackgroundColor="#111827"    # panel background
+textColor="#e6edf3"                   # soft white
+font="sans serif"
