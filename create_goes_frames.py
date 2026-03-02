@@ -7,6 +7,7 @@ import os
 
 import xarray as xr
 import numpy as np
+import matplotlib.colors as mcolors
 
 from matplotlib import cm, colors
 from rasterio.crs import CRS
@@ -41,37 +42,58 @@ def make_image(ds: xr.Dataset, suffix: str) -> np.ndarray:
         raise ValueError(f"Unsupported suffix: {suffix}")
 
 
-def cod_to_rgba(cod: np.ndarray) -> np.ndarray:
+def cod_to_rgba(
+    cod: np.ndarray,
+    min_log_cod: float = -2.0,
+    transition_log_cod: float = 0.176,
+    max_log_cod: float = 2.0,
+) -> np.ndarray:
     """
-    Convert a 2D cloud optical depth array to a classified RGBA image.
+    Convert a 2D cloud optical depth array to a viridis scale RGBA image.
 
-    Alpha = 0 for COD <= 0 or NaN
-    Alpha = 255 for valid COD
+    Parameters
+    ----------
+    cod : np.ndarray
+        2D array (rows, cols) of cloud optical depth values.
+    min_log_cod : float
+        Minimum cloud optical depth (Celcius) used as lower bound for cold clouds.
+    max_log_cod : float
+        Maximum cloud optical depth (Celcius) used as upper bound for warm clouds.
+    Returns
+    -------
+    np.ndarray
+        3D uint8 array (rows, cols, 4) representing an RGBA image.
     """
     if cod.ndim != 2:
-        raise ValueError("Input array must be 2D (rows, cols)")
+        raise ValueError("Input array must be 2D")
 
-    h = np.asarray(cod, dtype=np.float32)
+    # Mask no-data
+    mask = np.isnan(cod) | (cod <= 0)
 
-    rgba = np.zeros((*h.shape, 4), dtype=np.uint8)
+    cod = np.clip(cod, 10**min_log_cod, 10**max_log_cod)
+    cod = np.log10(cod)
 
-    valid = np.isfinite(h) & (h > 0)
+    # Get base colormaps
+    blues = matplotlib.colormaps["Blues_r"](np.linspace(0.0, 0.5, 128))
+    reds = matplotlib.colormaps["OrRd"](np.linspace(0.5, 1, 128))
 
-    good = valid & (h <= 0.16)
-    fair = valid & (h > 0.16) & (h <= 0.35)
-    poor = valid & (h > 0.35) & (h <= 0.69)
-    very_poor = valid & (h > 0.69) & (h <= 1.0)
-    blocked = valid & (h > 1.0)
+    # Combine them
+    colors = np.vstack((blues, reds))  # Dark → light blue -> Light → dark red
+    custom_cmap = mcolors.LinearSegmentedColormap.from_list("CloudOpticalDepth", colors)
 
-    rgba[good, :3] = (40, 85, 175)
-    rgba[fair, :3] = (110, 155, 215)
-    rgba[poor, :3] = (205, 150, 90)
-    rgba[very_poor, :3] = (180, 115, 70)
-    rgba[blocked, :3] = (117, 38, 27)
+    # Define normalization with a transition point
+    norm = mcolors.TwoSlopeNorm(
+        vmin=min_log_cod, vcenter=transition_log_cod, vmax=max_log_cod
+    )
 
-    # Alpha channel
-    rgba[valid, 3] = 255  # visible
-    rgba[~valid, 3] = 0  # fully transparent
+    # Apply colormap (returns float RGBA in [0,1])
+    rgba = custom_cmap(norm(cod))
+
+    # Convert to uint8
+    rgba = (rgba * 255).astype(np.uint8)
+
+    # Set alpha channel
+    rgba[..., 3] = np.where(mask, 0, 255)
 
     return rgba
 
@@ -123,42 +145,55 @@ def ctt_to_rgba(
 
 def ch_to_rgba(cloud_height_m: np.ndarray, max_height_m: float = 20000.0) -> np.ndarray:
     """
-    Convert a 2D cloud height array (meters) to a classified RGB image.
-
-    Parameters
-    ----------
-    cloud_height_m : np.ndarray
-        2D array (rows, cols) of cloud height values in meters.
-    max_height_m : float
-        Maximum cloud height (meters) used as upper bound for high clouds.
-
-    Returns
-    -------
-    np.ndarray
-        3D uint8 array (rows, cols, 3) representing an RGB image.
+    Convert a 2D cloud height array (meters) to a continuous RGBA image
+    using matplotlib Oranges, Greens, and Purples colormaps.
     """
+
     if cloud_height_m.ndim != 2:
         raise ValueError("Input array must be 2D (rows, cols)")
 
-    h = np.asarray(cloud_height_m, dtype=np.float32)
+    cth = np.asarray(cloud_height_m, dtype=np.float32)
 
-    # Initialize output as all transparent
-    rgba = np.zeros((*h.shape, 4), dtype=np.uint8)
+    rgba = np.zeros((*cth.shape, 4), dtype=np.uint8)
 
-    # Masks
-    valid = np.isfinite(h) & (h > 0)
-    low = valid & (h < 2000)
-    mid = valid & (h >= 2000) & (h < 7000)
-    high = valid & (h >= 7000) & (h <= max_height_m)
+    valid = np.isfinite(cth) & (cth > 0)
 
-    # Assign colors
-    rgba[low, :3] = (86, 180, 233)  # light blue
-    rgba[mid, :3] = (213, 94, 0)  # orange
-    rgba[high, :3] = (0, 158, 115)  # green
+    low = valid & (cth < 2000)
+    mid = valid & (cth >= 2000) & (cth < 7000)
+    high = valid & (cth >= 7000) & (cth <= max_height_m)
 
-    # Alpha channel
-    rgba[valid, 3] = 255  # visible
-    rgba[~valid, 3] = 0  # fully transparent
+    # Use matplotlib colormaps
+    cmap_low = matplotlib.colormaps["Oranges"]
+    cmap_mid = matplotlib.colormaps["Greens"]
+    cmap_high = matplotlib.colormaps["Purples"]
+
+    # Controlled sampling range (avoids washed-out tones)
+    cmin, cmax = 0.4, 0.75
+
+    # LOW CLOUDS
+    if np.any(low):
+        t = cth[low] / 2000.0
+        t = cmin + (cmax - cmin) * t
+        colors = cmap_low(t)
+        rgba[low] = (colors * 255).astype(np.uint8)
+
+    # MID CLOUDS
+    if np.any(mid):
+        t = (cth[mid] - 2000.0) / (7000.0 - 2000.0)
+        t = cmin + (cmax - cmin) * t
+        colors = cmap_mid(t)
+        rgba[mid] = (colors * 255).astype(np.uint8)
+
+    # HIGH CLOUDS
+    if np.any(high):
+        t = (cth[high] - 7000.0) / (max_height_m - 7000.0)
+        t = np.clip(t, 0, 1)
+        t = cmin + (cmax - cmin) * t
+        colors = cmap_high(t)
+        rgba[high] = (colors * 255).astype(np.uint8)
+
+    # Transparency
+    rgba[~valid, 3] = 0
 
     return rgba
 
