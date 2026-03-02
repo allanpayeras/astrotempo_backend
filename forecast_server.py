@@ -193,7 +193,7 @@ def forecast(lat: float = Query(...), lon: float = Query(...)):
     df = get_forecast_for_location(lat, lon)
 
     df["time"] = pd.to_datetime(df["forecast_hour"], format="%Y%m%d%H", utc=True)
-    df = df[df["time"] >= datetime.now(tz=ZoneInfo("UTC")) - timedelta(hours=4)]
+    # df = df[df["time"] >= datetime.now(tz=ZoneInfo("UTC")) - timedelta(hours=4)]
 
     start = df["time"].iloc[0].tz_convert(TZ)
     end = df["time"].iloc[-1].tz_convert(TZ)
