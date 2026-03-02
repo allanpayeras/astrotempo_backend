@@ -4,6 +4,7 @@ latest_wrf_files/
 historical_wrf_data_tmp/
 goes_data/
 goes_cog/
+tiles/
 
 sandbox/frames/
 sandbox/goes_data_cache/
