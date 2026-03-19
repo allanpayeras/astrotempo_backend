@@ -45,11 +45,11 @@ def make_image(ds: xr.Dataset, suffix: str) -> np.ndarray:
 def cod_to_rgba(
     cod: np.ndarray,
     min_log_cod: float = -2.0,
-    transition_log_cod: float = 0.176,
+    transition_log_cod: float = 0.0,
     max_log_cod: float = 2.0,
 ) -> np.ndarray:
     """
-    Convert a 2D cloud optical depth array to a viridis scale RGBA image.
+    Convert a 2D cloud optical depth array to a blue-red scale RGBA image.
 
     Parameters
     ----------
@@ -121,7 +121,7 @@ def ctt_to_rgba(
     if cloud_temp_k.ndim != 2:
         raise ValueError("Input array must be 2D")
 
-    # Kelvin → Celsius
+    # Kelvin to Celsius
     t_celsius = cloud_temp_k - 273.15
 
     # Mask no-data
@@ -146,7 +146,7 @@ def ctt_to_rgba(
 def ch_to_rgba(cloud_height_m: np.ndarray, max_height_m: float = 20000.0) -> np.ndarray:
     """
     Convert a 2D cloud height array (meters) to a continuous RGBA image
-    using matplotlib Oranges, Greens, and Purples colormaps.
+    using matplotlib plasma colormap.
     """
 
     if cloud_height_m.ndim != 2:
@@ -162,15 +162,12 @@ def ch_to_rgba(cloud_height_m: np.ndarray, max_height_m: float = 20000.0) -> np.
     mid = valid & (cth >= 2000) & (cth < 7000)
     high = valid & (cth >= 7000) & (cth <= max_height_m)
 
-    # Use matplotlib colormaps
-    cmap_low = matplotlib.colormaps["Oranges"]
-    cmap_mid = matplotlib.colormaps["Greens"]
-    cmap_high = matplotlib.colormaps["Purples"]
-
-    # Controlled sampling range (avoids washed-out tones)
-    cmin, cmax = 0.4, 0.75
+    cmap_low = matplotlib.colormaps["plasma_r"]
+    cmap_mid = matplotlib.colormaps["plasma_r"]
+    cmap_high = matplotlib.colormaps["plasma_r"]
 
     # LOW CLOUDS
+    cmin, cmax = 0.0, 0.25
     if np.any(low):
         t = cth[low] / 2000.0
         t = cmin + (cmax - cmin) * t
@@ -178,6 +175,7 @@ def ch_to_rgba(cloud_height_m: np.ndarray, max_height_m: float = 20000.0) -> np.
         rgba[low] = (colors * 255).astype(np.uint8)
 
     # MID CLOUDS
+    cmin, cmax = 0.25, 0.6
     if np.any(mid):
         t = (cth[mid] - 2000.0) / (7000.0 - 2000.0)
         t = cmin + (cmax - cmin) * t
@@ -186,6 +184,7 @@ def ch_to_rgba(cloud_height_m: np.ndarray, max_height_m: float = 20000.0) -> np.
 
     # HIGH CLOUDS
     if np.any(high):
+        cmin, cmax = 0.6, 1.0
         t = (cth[high] - 7000.0) / (max_height_m - 7000.0)
         t = np.clip(t, 0, 1)
         t = cmin + (cmax - cmin) * t
