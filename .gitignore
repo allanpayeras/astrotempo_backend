@@ -32,3 +32,6 @@ ipython_config.py
 
 # PyPI configuration file
 .pypirc
+
+
+__pycache__
