@@ -2,16 +2,33 @@ import os
 import requests
 import duckdb
 
+import datetime as dt
+import pandas as pd
+
 from tqdm import tqdm
 from pathlib import Path
 from urllib.parse import urlsplit
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from create_wrf_db import process_grib2, insert_batch, process_extracted_data
+from create_wrf_db import process_grib2, insert_batch
 
 TMP_DIR = "./historical_wrf_data_tmp"
 TMP_DB_FILENAME = "historical_wrf_data_tmp.duckdb"
 DB_FILENAME = "historical_wrf_data.duckdb"
+
+
+GRIB_VARIABLES = {
+    "total_cloud": "Total Cloud Cover",
+    "temp_C": "2 metre temperature",
+    "dewpoint_C": "2 metre dewpoint temperature",
+    "surface_pressure_Pa": "Surface pressure",
+    "precipitable_water_kg_m2": "Precipitable water",
+    "low_cloud_cover": "Low cloud cover",
+    "mid_cloud_cover": "Medium cloud cover",
+    "high_cloud_cover": "High cloud cover",
+    "visibility_m": "Visibility",
+    "boundary_layer_height_m": "Boundary layer height",
+}
 
 
 def init_database(conn):
@@ -24,13 +41,29 @@ def init_database(conn):
             lon_idx INTEGER,
             lat DOUBLE,
             lon DOUBLE,
-            cloud DOUBLE,
-            temp DOUBLE,
-            dewpoint DOUBLE,
-            transparency DOUBLE
+            total_cloud DOUBLE,
+            temp_C DOUBLE,
+            dewpoint_C DOUBLE,
+            surface_pressure_Pa DOUBLE,
+            precipitable_water_kg_m2 DOUBLE,
+            low_cloud_cover DOUBLE,
+            mid_cloud_cover DOUBLE,
+            high_cloud_cover DOUBLE,
+            visibility_m DOUBLE,
+            boundary_layer_height_m DOUBLE
         );
         """
     )
+
+
+def process_extracted_data(data: dict):
+    df = pd.DataFrame(data)
+
+    # convert temperatures from K to C
+    df["temp_C"] = df["temp_C"] - 273.15
+    df["dewpoint_C"] = df["dewpoint_C"] - 273.15
+
+    return df
 
 
 # add relevant data from grib2 file to duckdb
@@ -163,12 +196,23 @@ def main():
     # create a duck DB to store historical WRF data
     # download 3 years of historical WRF data
     # one full day of for each week of every month of the past 3 years
-    urls = [
-        # list of URLs to historical WRF grib2 files
-        "https://dataserver.cptec.inpe.br/dataserver_modelos/wrf/ams_07km/brutos/2024/01/01/00/WRF_cpt_07KM_2024010100_2024010101.grib2",
-    ]
-    for url in urls:
-        download_and_ingest_grib2(url)
+    now = dt.datetime.now(tz=dt.timezone.utc)
+    for week_offset in range(0, 52 * 3):
+        day = now - dt.timedelta(weeks=week_offset)
+        day = day.replace(hour=0, minute=0, second=0, microsecond=0)
+        url_base = f"https://dataserver.cptec.inpe.br/dataserver_modelos/wrf/ams_07km/brutos/{day.year:04d}/{day.month:02d}/{day.day:02d}/00/"
+        url_file = f"WRF_cpt_07KM_{day.year:04d}{day.month:02d}{day.day:02d}00_{day.year:04d}{day.month:02d}{day.day:02d}"
+        for fh in range(0, 24):
+            fh_str = f"{fh:02d}"
+            full_url = url_base + url_file + fh_str + ".grib2"
+            download_and_ingest_grib2(full_url)
+
+    # urls = [
+    #     # list of URLs to historical WRF grib2 files
+    #     "https://dataserver.cptec.inpe.br/dataserver_modelos/wrf/ams_07km/brutos/2024/01/01/00/WRF_cpt_07KM_2024010100_2024010101.grib2",
+    # ]
+    # for url in urls:
+    #     download_and_ingest_grib2(url)
 
     if os.path.exists(TMP_DB_FILENAME):
         Path(TMP_DB_FILENAME).replace(DB_FILENAME)
