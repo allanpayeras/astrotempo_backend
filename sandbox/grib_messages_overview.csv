@@ -1,0 +1,305 @@
+shortName,name,units,typeOfLevel,level,forecastTime_h,validDate,gridType,centre
+refc,Maximum/Composite radar reflectivity,dB,atmosphereSingleLayer,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+vis,Visibility,m,surface,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+vis,Visibility,m,cloudTop,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+gust,Wind speed (gust),m s**-1,surface,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isobaricInhPa,50,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,isobaricInhPa,50,1,2026-07-03 01:00:00,regular_ll,kwbc
+pt,Potential temperature,K,isobaricInhPa,50,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isobaricInhPa,50,1,2026-07-03 01:00:00,regular_ll,kwbc
+dpt,Dew point temperature,K,isobaricInhPa,50,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,isobaricInhPa,50,1,2026-07-03 01:00:00,regular_ll,kwbc
+w,Vertical velocity,Pa s**-1,isobaricInhPa,50,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,isobaricInhPa,50,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,isobaricInhPa,50,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isobaricInhPa,100,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,isobaricInhPa,100,1,2026-07-03 01:00:00,regular_ll,kwbc
+pt,Potential temperature,K,isobaricInhPa,100,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isobaricInhPa,100,1,2026-07-03 01:00:00,regular_ll,kwbc
+dpt,Dew point temperature,K,isobaricInhPa,100,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,isobaricInhPa,100,1,2026-07-03 01:00:00,regular_ll,kwbc
+w,Vertical velocity,Pa s**-1,isobaricInhPa,100,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,isobaricInhPa,100,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,isobaricInhPa,100,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isobaricInhPa,150,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,isobaricInhPa,150,1,2026-07-03 01:00:00,regular_ll,kwbc
+pt,Potential temperature,K,isobaricInhPa,150,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isobaricInhPa,150,1,2026-07-03 01:00:00,regular_ll,kwbc
+dpt,Dew point temperature,K,isobaricInhPa,150,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,isobaricInhPa,150,1,2026-07-03 01:00:00,regular_ll,kwbc
+w,Vertical velocity,Pa s**-1,isobaricInhPa,150,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,isobaricInhPa,150,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,isobaricInhPa,150,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isobaricInhPa,200,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,isobaricInhPa,200,1,2026-07-03 01:00:00,regular_ll,kwbc
+pt,Potential temperature,K,isobaricInhPa,200,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isobaricInhPa,200,1,2026-07-03 01:00:00,regular_ll,kwbc
+dpt,Dew point temperature,K,isobaricInhPa,200,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,isobaricInhPa,200,1,2026-07-03 01:00:00,regular_ll,kwbc
+w,Vertical velocity,Pa s**-1,isobaricInhPa,200,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,isobaricInhPa,200,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,isobaricInhPa,200,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isobaricInhPa,250,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,isobaricInhPa,250,1,2026-07-03 01:00:00,regular_ll,kwbc
+pt,Potential temperature,K,isobaricInhPa,250,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isobaricInhPa,250,1,2026-07-03 01:00:00,regular_ll,kwbc
+dpt,Dew point temperature,K,isobaricInhPa,250,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,isobaricInhPa,250,1,2026-07-03 01:00:00,regular_ll,kwbc
+w,Vertical velocity,Pa s**-1,isobaricInhPa,250,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,isobaricInhPa,250,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,isobaricInhPa,250,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isobaricInhPa,300,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,isobaricInhPa,300,1,2026-07-03 01:00:00,regular_ll,kwbc
+pt,Potential temperature,K,isobaricInhPa,300,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isobaricInhPa,300,1,2026-07-03 01:00:00,regular_ll,kwbc
+dpt,Dew point temperature,K,isobaricInhPa,300,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,isobaricInhPa,300,1,2026-07-03 01:00:00,regular_ll,kwbc
+w,Vertical velocity,Pa s**-1,isobaricInhPa,300,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,isobaricInhPa,300,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,isobaricInhPa,300,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isobaricInhPa,350,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,isobaricInhPa,350,1,2026-07-03 01:00:00,regular_ll,kwbc
+pt,Potential temperature,K,isobaricInhPa,350,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isobaricInhPa,350,1,2026-07-03 01:00:00,regular_ll,kwbc
+dpt,Dew point temperature,K,isobaricInhPa,350,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,isobaricInhPa,350,1,2026-07-03 01:00:00,regular_ll,kwbc
+w,Vertical velocity,Pa s**-1,isobaricInhPa,350,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,isobaricInhPa,350,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,isobaricInhPa,350,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isobaricInhPa,400,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,isobaricInhPa,400,1,2026-07-03 01:00:00,regular_ll,kwbc
+pt,Potential temperature,K,isobaricInhPa,400,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isobaricInhPa,400,1,2026-07-03 01:00:00,regular_ll,kwbc
+dpt,Dew point temperature,K,isobaricInhPa,400,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,isobaricInhPa,400,1,2026-07-03 01:00:00,regular_ll,kwbc
+w,Vertical velocity,Pa s**-1,isobaricInhPa,400,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,isobaricInhPa,400,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,isobaricInhPa,400,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isobaricInhPa,450,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,isobaricInhPa,450,1,2026-07-03 01:00:00,regular_ll,kwbc
+pt,Potential temperature,K,isobaricInhPa,450,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isobaricInhPa,450,1,2026-07-03 01:00:00,regular_ll,kwbc
+dpt,Dew point temperature,K,isobaricInhPa,450,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,isobaricInhPa,450,1,2026-07-03 01:00:00,regular_ll,kwbc
+w,Vertical velocity,Pa s**-1,isobaricInhPa,450,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,isobaricInhPa,450,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,isobaricInhPa,450,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isobaricInhPa,500,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,isobaricInhPa,500,1,2026-07-03 01:00:00,regular_ll,kwbc
+pt,Potential temperature,K,isobaricInhPa,500,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isobaricInhPa,500,1,2026-07-03 01:00:00,regular_ll,kwbc
+dpt,Dew point temperature,K,isobaricInhPa,500,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,isobaricInhPa,500,1,2026-07-03 01:00:00,regular_ll,kwbc
+w,Vertical velocity,Pa s**-1,isobaricInhPa,500,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,isobaricInhPa,500,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,isobaricInhPa,500,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isobaricInhPa,550,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,isobaricInhPa,550,1,2026-07-03 01:00:00,regular_ll,kwbc
+pt,Potential temperature,K,isobaricInhPa,550,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isobaricInhPa,550,1,2026-07-03 01:00:00,regular_ll,kwbc
+dpt,Dew point temperature,K,isobaricInhPa,550,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,isobaricInhPa,550,1,2026-07-03 01:00:00,regular_ll,kwbc
+w,Vertical velocity,Pa s**-1,isobaricInhPa,550,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,isobaricInhPa,550,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,isobaricInhPa,550,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isobaricInhPa,600,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,isobaricInhPa,600,1,2026-07-03 01:00:00,regular_ll,kwbc
+pt,Potential temperature,K,isobaricInhPa,600,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isobaricInhPa,600,1,2026-07-03 01:00:00,regular_ll,kwbc
+dpt,Dew point temperature,K,isobaricInhPa,600,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,isobaricInhPa,600,1,2026-07-03 01:00:00,regular_ll,kwbc
+w,Vertical velocity,Pa s**-1,isobaricInhPa,600,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,isobaricInhPa,600,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,isobaricInhPa,600,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isobaricInhPa,650,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,isobaricInhPa,650,1,2026-07-03 01:00:00,regular_ll,kwbc
+pt,Potential temperature,K,isobaricInhPa,650,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isobaricInhPa,650,1,2026-07-03 01:00:00,regular_ll,kwbc
+dpt,Dew point temperature,K,isobaricInhPa,650,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,isobaricInhPa,650,1,2026-07-03 01:00:00,regular_ll,kwbc
+w,Vertical velocity,Pa s**-1,isobaricInhPa,650,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,isobaricInhPa,650,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,isobaricInhPa,650,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isobaricInhPa,700,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,isobaricInhPa,700,1,2026-07-03 01:00:00,regular_ll,kwbc
+pt,Potential temperature,K,isobaricInhPa,700,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isobaricInhPa,700,1,2026-07-03 01:00:00,regular_ll,kwbc
+dpt,Dew point temperature,K,isobaricInhPa,700,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,isobaricInhPa,700,1,2026-07-03 01:00:00,regular_ll,kwbc
+w,Vertical velocity,Pa s**-1,isobaricInhPa,700,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,isobaricInhPa,700,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,isobaricInhPa,700,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isobaricInhPa,750,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,isobaricInhPa,750,1,2026-07-03 01:00:00,regular_ll,kwbc
+pt,Potential temperature,K,isobaricInhPa,750,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isobaricInhPa,750,1,2026-07-03 01:00:00,regular_ll,kwbc
+dpt,Dew point temperature,K,isobaricInhPa,750,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,isobaricInhPa,750,1,2026-07-03 01:00:00,regular_ll,kwbc
+w,Vertical velocity,Pa s**-1,isobaricInhPa,750,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,isobaricInhPa,750,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,isobaricInhPa,750,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isobaricInhPa,775,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,isobaricInhPa,775,1,2026-07-03 01:00:00,regular_ll,kwbc
+pt,Potential temperature,K,isobaricInhPa,775,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isobaricInhPa,775,1,2026-07-03 01:00:00,regular_ll,kwbc
+dpt,Dew point temperature,K,isobaricInhPa,775,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,isobaricInhPa,775,1,2026-07-03 01:00:00,regular_ll,kwbc
+w,Vertical velocity,Pa s**-1,isobaricInhPa,775,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,isobaricInhPa,775,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,isobaricInhPa,775,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isobaricInhPa,800,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,isobaricInhPa,800,1,2026-07-03 01:00:00,regular_ll,kwbc
+pt,Potential temperature,K,isobaricInhPa,800,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isobaricInhPa,800,1,2026-07-03 01:00:00,regular_ll,kwbc
+dpt,Dew point temperature,K,isobaricInhPa,800,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,isobaricInhPa,800,1,2026-07-03 01:00:00,regular_ll,kwbc
+w,Vertical velocity,Pa s**-1,isobaricInhPa,800,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,isobaricInhPa,800,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,isobaricInhPa,800,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isobaricInhPa,825,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,isobaricInhPa,825,1,2026-07-03 01:00:00,regular_ll,kwbc
+pt,Potential temperature,K,isobaricInhPa,825,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isobaricInhPa,825,1,2026-07-03 01:00:00,regular_ll,kwbc
+dpt,Dew point temperature,K,isobaricInhPa,825,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,isobaricInhPa,825,1,2026-07-03 01:00:00,regular_ll,kwbc
+w,Vertical velocity,Pa s**-1,isobaricInhPa,825,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,isobaricInhPa,825,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,isobaricInhPa,825,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isobaricInhPa,850,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,isobaricInhPa,850,1,2026-07-03 01:00:00,regular_ll,kwbc
+pt,Potential temperature,K,isobaricInhPa,850,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isobaricInhPa,850,1,2026-07-03 01:00:00,regular_ll,kwbc
+dpt,Dew point temperature,K,isobaricInhPa,850,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,isobaricInhPa,850,1,2026-07-03 01:00:00,regular_ll,kwbc
+w,Vertical velocity,Pa s**-1,isobaricInhPa,850,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,isobaricInhPa,850,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,isobaricInhPa,850,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isobaricInhPa,875,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,isobaricInhPa,875,1,2026-07-03 01:00:00,regular_ll,kwbc
+pt,Potential temperature,K,isobaricInhPa,875,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isobaricInhPa,875,1,2026-07-03 01:00:00,regular_ll,kwbc
+dpt,Dew point temperature,K,isobaricInhPa,875,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,isobaricInhPa,875,1,2026-07-03 01:00:00,regular_ll,kwbc
+w,Vertical velocity,Pa s**-1,isobaricInhPa,875,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,isobaricInhPa,875,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,isobaricInhPa,875,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isobaricInhPa,900,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,isobaricInhPa,900,1,2026-07-03 01:00:00,regular_ll,kwbc
+pt,Potential temperature,K,isobaricInhPa,900,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isobaricInhPa,900,1,2026-07-03 01:00:00,regular_ll,kwbc
+dpt,Dew point temperature,K,isobaricInhPa,900,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,isobaricInhPa,900,1,2026-07-03 01:00:00,regular_ll,kwbc
+w,Vertical velocity,Pa s**-1,isobaricInhPa,900,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,isobaricInhPa,900,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,isobaricInhPa,900,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isobaricInhPa,925,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,isobaricInhPa,925,1,2026-07-03 01:00:00,regular_ll,kwbc
+pt,Potential temperature,K,isobaricInhPa,925,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isobaricInhPa,925,1,2026-07-03 01:00:00,regular_ll,kwbc
+dpt,Dew point temperature,K,isobaricInhPa,925,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,isobaricInhPa,925,1,2026-07-03 01:00:00,regular_ll,kwbc
+w,Vertical velocity,Pa s**-1,isobaricInhPa,925,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,isobaricInhPa,925,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,isobaricInhPa,925,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isobaricInhPa,950,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,isobaricInhPa,950,1,2026-07-03 01:00:00,regular_ll,kwbc
+pt,Potential temperature,K,isobaricInhPa,950,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isobaricInhPa,950,1,2026-07-03 01:00:00,regular_ll,kwbc
+dpt,Dew point temperature,K,isobaricInhPa,950,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,isobaricInhPa,950,1,2026-07-03 01:00:00,regular_ll,kwbc
+w,Vertical velocity,Pa s**-1,isobaricInhPa,950,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,isobaricInhPa,950,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,isobaricInhPa,950,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isobaricInhPa,975,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,isobaricInhPa,975,1,2026-07-03 01:00:00,regular_ll,kwbc
+pt,Potential temperature,K,isobaricInhPa,975,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isobaricInhPa,975,1,2026-07-03 01:00:00,regular_ll,kwbc
+dpt,Dew point temperature,K,isobaricInhPa,975,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,isobaricInhPa,975,1,2026-07-03 01:00:00,regular_ll,kwbc
+w,Vertical velocity,Pa s**-1,isobaricInhPa,975,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,isobaricInhPa,975,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,isobaricInhPa,975,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,isobaricInhPa,1000,1,2026-07-03 01:00:00,regular_ll,kwbc
+pt,Potential temperature,K,isobaricInhPa,1000,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isobaricInhPa,1000,1,2026-07-03 01:00:00,regular_ll,kwbc
+dpt,Dew point temperature,K,isobaricInhPa,1000,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,isobaricInhPa,1000,1,2026-07-03 01:00:00,regular_ll,kwbc
+w,Vertical velocity,Pa s**-1,isobaricInhPa,1000,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,isobaricInhPa,1000,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,isobaricInhPa,1000,1,2026-07-03 01:00:00,regular_ll,kwbc
+mslet,MSLP (Eta model reduction),Pa,meanSea,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isobaricInhPa,1000,1,2026-07-03 01:00:00,regular_ll,kwbc
+refd,Derived radar reflectivity,dB,heightAboveGround,4000,1,2026-07-03 01:00:00,regular_ll,kwbc
+refd,Derived radar reflectivity,dB,heightAboveGround,1000,1,2026-07-03 01:00:00,regular_ll,kwbc
+sp,Surface pressure,Pa,surface,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+orog,Orography,m,surface,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,surface,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+q,Specific humidity,kg kg**-1,surface,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+st,Soil temperature,K,depthBelowLandLayer,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+soilw,Volumetric soil moisture content,Proportion,depthBelowLandLayer,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+soill,Liquid volumetric soil moisture (non-frozen),Proportion,depthBelowLandLayer,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+st,Soil temperature,K,depthBelowLandLayer,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+soilw,Volumetric soil moisture content,Proportion,depthBelowLandLayer,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+soill,Liquid volumetric soil moisture (non-frozen),Proportion,depthBelowLandLayer,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+st,Soil temperature,K,depthBelowLandLayer,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+soilw,Volumetric soil moisture content,Proportion,depthBelowLandLayer,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+soill,Liquid volumetric soil moisture (non-frozen),Proportion,depthBelowLandLayer,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+st,Soil temperature,K,depthBelowLandLayer,1,1,2026-07-03 01:00:00,regular_ll,kwbc
+soilw,Volumetric soil moisture content,Proportion,depthBelowLandLayer,1,1,2026-07-03 01:00:00,regular_ll,kwbc
+soill,Liquid volumetric soil moisture (non-frozen),Proportion,depthBelowLandLayer,1,1,2026-07-03 01:00:00,regular_ll,kwbc
+sdwe,Water equivalent of accumulated snow depth (deprecated),kg m**-2,surface,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+snowc,Snow cover,%,surface,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+2t,2 metre temperature,K,heightAboveGround,2,1,2026-07-03 01:00:00,regular_ll,kwbc
+2sh,2 metre specific humidity,kg kg**-1,heightAboveGround,2,1,2026-07-03 01:00:00,regular_ll,kwbc
+2d,2 metre dewpoint temperature,K,heightAboveGround,2,1,2026-07-03 01:00:00,regular_ll,kwbc
+2r,2 metre relative humidity,%,heightAboveGround,2,1,2026-07-03 01:00:00,regular_ll,kwbc
+10u,10 metre U wind component,m s**-1,heightAboveGround,10,1,2026-07-03 01:00:00,regular_ll,kwbc
+10v,10 metre V wind component,m s**-1,heightAboveGround,10,1,2026-07-03 01:00:00,regular_ll,kwbc
+tp,Total Precipitation,kg m**-2,surface,0,0,2026-07-03 00:00:00,regular_ll,kwbc
+acpcp,Convective precipitation (water),kg m**-2,surface,0,0,2026-07-03 00:00:00,regular_ll,kwbc
+ncpcp,Large scale precipitation (non-convective),kg m**-2,surface,0,0,2026-07-03 00:00:00,regular_ll,kwbc
+ssrun,Storm surface runoff,kg m**-2,surface,0,0,2026-07-03 00:00:00,regular_ll,kwbc
+bgrun,Baseflow-groundwater runoff,kg m**-2,surface,0,0,2026-07-03 00:00:00,regular_ll,kwbc
+ishf,Instantaneous surface sensible heat net flux,W m**-2,surface,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+slhtf,Surface latent heat net flux,W m**-2,surface,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+gflux,Ground heat flux,W m**-2,surface,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+lftx,Surface lifted index,K,isobaricLayer,500,1,2026-07-03 01:00:00,regular_ll,kwbc
+cape,Convective available potential energy,J kg**-1,surface,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+cin,Convective inhibition,J kg**-1,surface,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+pwat,Precipitable water,kg m**-2,atmosphereSingleLayer,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+lcc,Low cloud cover,%,lowCloudLayer,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+mcc,Medium cloud cover,%,middleCloudLayer,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+hcc,High cloud cover,%,highCloudLayer,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+tcc,Total Cloud Cover,%,atmosphereSingleLayer,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,cloudBase,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,cloudCeiling,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,cloudTop,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+t,Temperature,K,cloudTop,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+sdswrf,Surface downward short-wave radiation flux,W m**-2,surface,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+sdlwrf,Surface downward long-wave radiation flux,W m**-2,surface,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+suswrf,Surface upward short-wave radiation flux,W m**-2,surface,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+sulwrf,Surface upward long-wave radiation flux,W m**-2,surface,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+hlcy,Storm relative helicity,m**2 s**-2,heightAboveGroundLayer,3000,1,2026-07-03 01:00:00,regular_ll,kwbc
+hlcy,Storm relative helicity,m**2 s**-2,heightAboveGroundLayer,1000,1,2026-07-03 01:00:00,regular_ll,kwbc
+ustm,U-component storm motion,m s**-1,heightAboveGroundLayer,6000,1,2026-07-03 01:00:00,regular_ll,kwbc
+vstm,V-component storm motion,m s**-1,heightAboveGroundLayer,6000,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,tropopause,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+pres,Pressure,Pa,maxWind,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,maxWind,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+u,U component of wind,m s**-1,maxWind,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+v,V component of wind,m s**-1,maxWind,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+100u,100 metre U wind component,m s**-1,heightAboveGround,100,1,2026-07-03 01:00:00,regular_ll,kwbc
+100v,100 metre V wind component,m s**-1,heightAboveGround,100,1,2026-07-03 01:00:00,regular_ll,kwbc
+gh,Geopotential height,gpm,isothermZero,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+r,Relative humidity,%,isothermZero,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+4lftx,Best (4-layer) lifted index,K,pressureFromGroundLayer,18000,1,2026-07-03 01:00:00,regular_ll,kwbc
+cape,Convective available potential energy,J kg**-1,pressureFromGroundLayer,18000,1,2026-07-03 01:00:00,regular_ll,kwbc
+cin,Convective inhibition,J kg**-1,pressureFromGroundLayer,18000,1,2026-07-03 01:00:00,regular_ll,kwbc
+blh,Boundary layer height,m,surface,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+cape,Convective available potential energy,J kg**-1,pressureFromGroundLayer,9000,1,2026-07-03 01:00:00,regular_ll,kwbc
+cin,Convective inhibition,J kg**-1,pressureFromGroundLayer,9000,1,2026-07-03 01:00:00,regular_ll,kwbc
+cape,Convective available potential energy,J kg**-1,pressureFromGroundLayer,25500,1,2026-07-03 01:00:00,regular_ll,kwbc
+cin,Convective inhibition,J kg**-1,pressureFromGroundLayer,25500,1,2026-07-03 01:00:00,regular_ll,kwbc
+plpl,Pressure of level from which parcel was lifted,Pa,pressureFromGroundLayer,25500,1,2026-07-03 01:00:00,regular_ll,kwbc
+lsm,Land-sea mask,(0 - 1),surface,0,1,2026-07-03 01:00:00,regular_ll,kwbc
+al,Forecast albedo,%,surface,0,1,2026-07-03 01:00:00,regular_ll,kwbc
