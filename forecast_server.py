@@ -1,19 +1,22 @@
+import time
+import duckdb
+import logging
+
+import numpy as np
+import pandas as pd
+
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
-import duckdb
-import pandas as pd
-import numpy as np
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
-
-from skyfield.api import load, wgs84
 from skyfield import almanac
+from skyfield.api import load, wgs84
+
 
 DB_PATH = "forecast.duckdb"
 TZ = ZoneInfo("America/Sao_Paulo")
 
 app = FastAPI(title="Astro Forecast API")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -22,42 +25,65 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+TS = load.timescale()
+EPH = load("de421.bsp")
+SUN = EPH["sun"]
+MOON = EPH["moon"]
+EARTH = EPH["earth"]
 
-# --------------------------------------------------
-# Database
-# --------------------------------------------------
+LOGGER = logging.getLogger("uvicorn")
+
+
 def get_forecast_for_location(lat: float, lon: float) -> pd.DataFrame:
+    """
+    Retrieve forecast data for a given latitude and longitude from
+    the DuckDB database.
+    """
+
+    # Find nearest grid point
     conn = duckdb.connect(DB_PATH, read_only=True)
 
-    nearest = """
-        SELECT lat, lon
-        FROM forecast
-        ORDER BY (lat - ?) * (lat - ?) + (lon - ?) * (lon - ?) ASC
-        LIMIT 1
-    """
-    nlat, nlon = conn.execute(nearest, (lat, lat, lon, lon)).fetchone()
+    grid = conn.execute("""
+        SELECT lat_idx, lon_idx, lat, lon
+        FROM grid
+    """).fetchdf()
 
-    query = """
-        SELECT forecast_hour, cloud, temp, dewpoint, transparency
+    GRID_LAT = grid["lat"].to_numpy()
+    GRID_LON = grid["lon"].to_numpy()
+    GRID_LAT_IDX = grid["lat_idx"].to_numpy()
+    GRID_LON_IDX = grid["lon_idx"].to_numpy()
+
+    dist2 = (GRID_LAT - lat) ** 2 + (GRID_LON - lon) ** 2
+    i = np.argmin(dist2)
+
+    lat_idx = int(GRID_LAT_IDX[i])
+    lon_idx = int(GRID_LON_IDX[i])
+
+    # Retrieve forecast
+    df = conn.execute(
+        """
+        SELECT
+            forecast_hour,
+            cloud,
+            temp,
+            dewpoint,
+            transparency
         FROM forecast
-        WHERE lat = ? AND lon = ?
+        WHERE lat_idx = ?
+          AND lon_idx = ?
         ORDER BY forecast_hour
-    """
-    df = conn.execute(query, (nlat, nlon)).fetchdf()
+        """,
+        (lat_idx, lon_idx),
+    ).fetchdf()
+
     conn.close()
+
     return df
 
 
-# --------------------------------------------------
-# Sun computation
-# --------------------------------------------------
 def get_sun_times(
     start: datetime, end: datetime, latitude: float, longitude: float, tz: ZoneInfo
 ):
-    # Load ephemeris and time scale
-    ts = load.timescale()
-    eph = load("de421.bsp")
-
     # Observer location
     observer = wgs84.latlon(latitude, longitude)
 
@@ -65,11 +91,11 @@ def get_sun_times(
     start = datetime(start.year, start.month, start.day, 0, 0, tzinfo=tz)
     end = datetime(end.year, end.month, end.day, 23, 59, tzinfo=tz)
 
-    t0 = ts.from_datetime(start)
-    t1 = ts.from_datetime(end)
+    t0 = TS.from_datetime(start)
+    t1 = TS.from_datetime(end)
 
     # Compute sunrise/sunset
-    f = almanac.sunrise_sunset(eph, observer)
+    f = almanac.sunrise_sunset(EPH, observer)
     times, events = almanac.find_discrete(t0, t1, f)
 
     sunrise = []
@@ -83,7 +109,7 @@ def get_sun_times(
             sunset.append(dt)
 
     # Compute astronomical twilight (-18 degrees)
-    f2 = almanac.dark_twilight_day(eph, observer)
+    f2 = almanac.dark_twilight_day(EPH, observer)
     t2, ev2 = almanac.find_discrete(t0, t1, f2)
 
     astronomical_sunrise = []
@@ -111,20 +137,13 @@ def get_sun_times(
     )
 
 
-# --------------------------------------------------
-# Moon computation
-# --------------------------------------------------
 def get_moon_illumination(date: datetime):
-    ts = load.timescale()
-    t = ts.from_datetime(date)
+    t = TS.from_datetime(date)
 
-    eph = load("de421.bsp")
-    sun, moon, earth = eph["sun"], eph["moon"], eph["earth"]
+    e = EARTH.at(t)
+    m = e.observe(MOON).apparent()
 
-    e = earth.at(t)
-    m = e.observe(moon).apparent()
-
-    return 100.0 * m.fraction_illuminated(sun)
+    return 100.0 * m.fraction_illuminated(SUN)
 
 
 def get_moon_up_illumination(
@@ -151,22 +170,17 @@ def get_moon_up_illumination(
         for i in range(int((end_dt - start_dt).total_seconds() // 60))
     ]
     times = np.array(times)
-    # create a corresponding numpy array initialized with np.nan
     illumination = np.full(len(times), np.nan)
 
     # Skyfield setup
-    ts = load.timescale()
-    eph = load("de421.bsp")
-    moon = eph["Moon"]
-    earth = eph["Earth"]
-    observer = earth + wgs84.latlon(latitude, longitude, elevation_m)
+    observer = EARTH + wgs84.latlon(latitude, longitude, elevation_m)
 
     # Convert to Skyfield time
-    t0 = ts.from_datetime(start_dt)
-    t1 = ts.from_datetime(end_dt)
+    t0 = TS.from_datetime(start_dt)
+    t1 = TS.from_datetime(end_dt)
 
-    t_r, _ = almanac.find_risings(observer, moon, t0, t1)
-    t_s, _ = almanac.find_settings(observer, moon, t0, t1)
+    t_r, _ = almanac.find_risings(observer, MOON, t0, t1)
+    t_s, _ = almanac.find_settings(observer, MOON, t0, t1)
 
     if t_s[0] < t_r[0]:
         # Moon is already up at start_dt
@@ -185,12 +199,13 @@ def get_moon_up_illumination(
     return df_moon.replace({np.nan: None})
 
 
-# --------------------------------------------------
 # API endpoint
-# --------------------------------------------------
 @app.get("/forecast")
 def forecast(lat: float = Query(...), lon: float = Query(...)):
+    t0 = time.perf_counter()
+
     df = get_forecast_for_location(lat, lon)
+    LOGGER.info("DB: %.3fs", time.perf_counter() - t0)
 
     df["time"] = pd.to_datetime(df["forecast_hour"], format="%Y%m%d%H", utc=True)
     # df = df[df["time"] >= datetime.now(tz=ZoneInfo("UTC")) - timedelta(hours=4)]
@@ -198,8 +213,15 @@ def forecast(lat: float = Query(...), lon: float = Query(...)):
     start = df["time"].iloc[0].tz_convert(TZ)
     end = df["time"].iloc[-1].tz_convert(TZ)
 
+    t1 = time.perf_counter()
     df_sun = get_sun_times(start, end, lat, lon, TZ)
+    LOGGER.info("Sun: %.3fs", time.perf_counter() - t1)
+
+    t2 = time.perf_counter()
     df_moon = get_moon_up_illumination(start, end, lat, lon, TZ)
+    LOGGER.info("Moon: %.3fs", time.perf_counter() - t2)
+
+    LOGGER.info("Total: %.3fs", time.perf_counter() - t0)
 
     return {
         "forecast": df.drop(columns="time").to_dict(orient="records"),
