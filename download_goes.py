@@ -66,18 +66,21 @@ def main():
     print(f"Downloading GOES data from {start_time} to {now}")
 
     for product in GOES_PRODUCTS:
-        print(f"Downloading product: {product}")
-        _ = goes_timerange(
-            start=start_time.replace(tzinfo=None),
-            end=now.replace(tzinfo=None),
-            satellite="goes19",
-            product=product,
-            domain="F",
-            return_as="filelist",
-            save_dir=GOES_DIR,
-            max_cpus=6,
-        )
-
+        try:
+            print(f"Downloading product: {product}")
+            _ = goes_timerange(
+                start=start_time.replace(tzinfo=None),
+                end=now.replace(tzinfo=None),
+                satellite="goes19",
+                product=product,
+                domain="F",
+                return_as="filelist",
+                save_dir=GOES_DIR,
+                max_cpus=2,
+            )
+        except Exception as e:
+            print(f"Unexpected error occurred while downloading the data: {e}")
+            
     clean_up_goes_data(GOES_DIR, start_time, now)
 
 
