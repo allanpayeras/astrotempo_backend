@@ -2,11 +2,19 @@ import os
 
 from typing import List
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 TILE_ROOT = "/var/www/tiles"
 VALID_PRODUCTS = {"cod", "acha", "acht"}
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 def get_available_timestamps(product: str) -> List[str]:
