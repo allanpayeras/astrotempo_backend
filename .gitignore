@@ -1,5 +1,5 @@
 # temporary data files
-data_tmp/
+wrf_download*/
 latest_wrf_files/
 historical_wrf_data_tmp/
 goes_data/
